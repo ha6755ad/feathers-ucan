@@ -161,7 +161,7 @@ Then the config is used in a before all hook like this
 
 ```jsx
 const authenticate = async (context:HookContext):Promise<HookContext> => {
-    return await allUcanAuth(ucanArgs(context), {or: ['patch'], admin: ['remove'] }})(context);
+    return await allUcanAuth(ucanArgs(context), {or: ['patch'], adminPass: ['remove'] }})(context);
 }
 
 ...
