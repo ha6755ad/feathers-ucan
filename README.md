@@ -104,7 +104,7 @@ const methods = {
 
 ******************noThrow:****************** is even looser - because it will not throw an error if the auth fails. It is just useful for having the `login._id` present in the `context.params`
 
-Note: the way ucans works, you cannot simply provide a “greatest ability” and have the verify method filter out lesser abilities. In other words, if you have `WRITE` segment, you’d expect that to be valid for a `READ` requirement. However, ucans is less opinionated than that. You need to reduce the ability yourself, or it will not verify even if you have a greater ability. We have greatest ability functions, but currently the `allUcanAuth` method does not use it. Add only the greatest ability you wish to enforce. The client for adding ucans to users does this already, so only custom scenarios should present a problem at this time. In the future, we will always reduce abilities for the greatest ability.
+Note: the way ucans works, you cannot simply provide a “greatest ability” and have the verify method filter out lesser abilities. In other words, if you have `WRITE` segment, you’d expect that to be valid for a `READ` requirement. However, ucans is less opinionated than that. You need to reduce the ability yourself, or it will not verify even if you have a greater ability. We have greatest ability functions, but currently the `allUcanAuth` method does not use it. Add only the greatest ability you wish to enforce. The UI we use for adding ucans to users does this already, so only custom scenarios should present a problem at this time. In the future, we will always reduce abilities for the greatest ability.
 
 ## Options
 
@@ -119,6 +119,7 @@ declare type UcanAuthOptions = {
 }
 ```
 
+### This section needs to be reworked to be open-sourcable. This is too specific to our internal material still
 - **************************creatorPass:************************** allows for a pass if the `login._id` calling the method is the same as the record in question `record.createdBy.login`
 - **********************loginPass:********************** allows for a free pass list of record paths that match the `login._id` calling the method. The first element of the array are the paths such as `[owner.id]` (dot notation for nested paths). In the future we expect to add `$in` functionality that can handle nested arrays as well (the current version will pass an array that includes the correct id, but only a flat array of simple ObjectIds).  The second element are the methods you want to allow this on ie: `['patch', 'create']`Use the `*` superuser for allowing all methods to pass.
 - ********or:******** explains to run the `Capability` configuration passed to the ********allUcanAuth methods******** to be run as an or scenario instead of and. This is a significant extension of how ucans otherwise work. It will run multiple verify methods and if any pass, the auth will pass.
@@ -161,7 +162,7 @@ Then the config is used in a before all hook like this
 
 ```jsx
 const authenticate = async (context:HookContext):Promise<HookContext> => {
-    return await allUcanAuth(ucanArgs(context), {or: ['patch'], admin: ['remove'] }})(context);
+    return await allUcanAuth(ucanArgs(context), {or: ['patch'], adminPass: ['remove'] }})(context);
 }
 
 ...
