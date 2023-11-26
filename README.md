@@ -75,6 +75,7 @@ Also worth noting is that we expose a `CoreCall` class that allows you to make f
       "defaultHierPart": "commoncare/*",
       "core_path": "core",
       "ucan_path": "ucan",
+      "ucan_aud": "core.ucan_aud",
       "client_ucan": "core.client_ucan",
         ...
 }

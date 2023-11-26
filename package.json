@@ -1,6 +1,6 @@
 {
   "name": "feathers-ucan",
-  "version": "0.0.1",
+  "version": "0.0.3",
   "description": "Ucan extension of feathers jwt auth",
   "source": "src/index.ts",
   "unpkg": "lib/index.umd.js",
@@ -30,7 +30,6 @@
   },
   "homepage": "https://github.com/ha6755ad/symbol-utils#readme",
   "devDependencies": {
-    "@types/ua-parser-js": "^0.7.36",
     "@typescript-eslint/eslint-plugin": "^5.10.0",
     "@typescript-eslint/parser": "^5.10.0",
     "eslint": "^8.10.0",
@@ -42,6 +41,7 @@
   "dependencies": {
     "@feathersjs/authentication": "^5.0.11",
     "@ucans/ucans": "^0.12.0",
+    "long-timeout": "^0.1.1",
     "radash": "^11.0.0",
     "symbol-ucan": "^0.0.0"
   }
