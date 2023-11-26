@@ -1,0 +1,48 @@
+{
+  "name": "feathers-ucan",
+  "version": "0.0.1",
+  "description": "Ucan extension of feathers jwt auth",
+  "source": "src/index.ts",
+  "unpkg": "lib/index.umd.js",
+  "main": "lib/index.js",
+  "type": "module",
+  "exports": {
+    ".": "./lib/index.js",
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "test": "test",
+    "prebuild": "rimraf lib dist && node scripts/gen-version.js",
+    "build": "rm -rf lib && microbundle --tsconfig tsconfig.json --no-sourcemap",
+    "dev": "microbundle --watch --tsconfig tsconfig.json --no-sourcemap"
+  },
+  "files": [
+    "lib"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://gitlab.com/symbolsyntax/symbol-client.git"
+  },
+  "author": "iy foundation",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/ha6755ad/symbol-utils/issues"
+  },
+  "homepage": "https://github.com/ha6755ad/symbol-utils#readme",
+  "devDependencies": {
+    "@types/ua-parser-js": "^0.7.36",
+    "@typescript-eslint/eslint-plugin": "^5.10.0",
+    "@typescript-eslint/parser": "^5.10.0",
+    "eslint": "^8.10.0",
+    "eslint-config-prettier": "^8.1.0",
+    "microbundle": "^0.15.1",
+    "prettier": "^2.5.1",
+    "typescript": "^4.5.4"
+  },
+  "dependencies": {
+    "@feathersjs/authentication": "^5.0.11",
+    "@ucans/ucans": "^0.12.0",
+    "radash": "^11.0.0",
+    "symbol-ucan": "^0.0.0"
+  }
+}

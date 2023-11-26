@@ -1,0 +1,12 @@
+{
+  "entryPoints": [
+    "./src/index.ts"
+  ],
+  "exclude": [
+    "**/*.test.ts"
+  ],
+  "excludeExternals": true,
+  "name": "Webnative SDK",
+  "out": "docs",
+  "theme": "default"
+}
