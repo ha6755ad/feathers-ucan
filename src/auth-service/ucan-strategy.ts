@@ -5,6 +5,7 @@ import {
     AuthenticationResult,
     AuthenticationBase, AuthenticationRequest
 } from '@feathersjs/authentication';
+// @ts-ignore
 import lt from 'long-timeout';
 import {validateUcan, ucanToken, _unset, _get} from 'symbol-ucan';
 
