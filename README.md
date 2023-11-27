@@ -144,10 +144,10 @@ const ucanArgs = (context:HookContext):UcanAuthOptions => {
             ['orgs', 'WRITE'] as [string, string],
             {
                 with: {
-                    hierPart: `${hierPartBase}/${context.id}`
+                    hierPart: defaultHierPart
                 },
                 can: {
-                    namespace: 'orgs',
+                    namespace: `orgs:${context.id}`,
                     segments: ['WRITE']
                 }
             } as Partial<Capability>
