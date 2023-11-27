@@ -55,7 +55,7 @@ export const updateUcan = () => {
         const raw = await buildUcan({
             issuer: encodeKeyPair({secretKey: secret}),
             audience: aud,
-            // lifetimeInSeconds: 60 * 60 * 24 * 30,
+            lifetimeInSeconds: 60 * 60 * 24 * 60,
             proofs: prf,
             ...context.data,
             capabilities

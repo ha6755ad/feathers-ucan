@@ -72,7 +72,7 @@ export class AuthService extends AuthenticationService {
             ucan = await buildUcan({
                 audience: parsed.payload.aud,
                 issuer,
-                // lifetimeInSeconds: 60 * 60 * 24 * 30,
+                lifetimeInSeconds: 60 * 60 * 24 * 60,
                 capabilities: parsed.payload.att
             })
             params.admin_pass = true;
