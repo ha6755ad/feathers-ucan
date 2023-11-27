@@ -7,8 +7,23 @@ import {
     VerifyOptions,
     encodeKeyPair
 } from 'symbol-ucan';
-import {CoreCall} from '../core';
+import {CoreCall, NullableId} from '../core';
 import {_flatten, _get, _set} from 'symbol-ucan';
+
+export type UcanAuthConfig = {
+    entity: string,
+    service: string,
+    client_ucan: string,
+    ucan_aud: string,
+    ucan_path: string,
+    core_path: string,
+    defaultHierPart: string,
+    defaultScheme: string
+}
+
+type AuthConfig = {
+    [key:string]: string
+}
 
 type AnyAuth = '*'
 export const anyAuth: AnyAuth = '*' as AnyAuth;
@@ -43,7 +58,7 @@ type Config = { entity: string, service: string, defaultScheme: string, defaultH
 type VerifyRes = { ok: boolean, value?: Array<any>, err?: Array<any> };
 
 export const noThrowAuth = async <S>(context: HookContext<S>):Promise<HookContext<S>> => {
-    const config = context.app.get('authentication');
+    const config = context.app.get('authentication') as AuthConfig;
     const entity = _get(context, ['auth', config.entity]);
     if (entity) context = _set(context, [config.core_path, config.entity], entity)
     context = await authenticate('jwt')(context as any)
@@ -55,7 +70,7 @@ export const noThrowAuth = async <S>(context: HookContext<S>):Promise<HookContex
 }
 
 export const bareAuth = async <S>(context: HookContext<S>):Promise<HookContext<S>> => {
-    const config = context.app.get('authentication');
+    const config = context.app.get('authentication') as AuthConfig;
     const entity = _get(context, ['auth', config.entity]);
     if (entity) context = _set(context, [config.core_path, config.entity], entity)
     return authenticate('jwt')(context as any);
@@ -96,7 +111,7 @@ export const ucanAuth = <S>(requiredCapabilities?: UcanCap, options?: UcanAuthOp
         if (requiredCapabilities === noThrow) return await noThrowAuth(context);
         context = await bareAuth(context);
         if (requiredCapabilities === anyAuth) return context;
-        if (options?.adminPass && context.params.admin_pass) return context;
+        if (options?.adminPass && _get(context.params, 'admin_pass') as any) return context;
         const {secret} = context.app.get('authentication') as {
             [key: string]: any
         };
@@ -105,7 +120,7 @@ export const ucanAuth = <S>(requiredCapabilities?: UcanCap, options?: UcanAuthOp
 
         const rootIssuer = encodeKeyPair({secretKey: secret}).did();
 
-        const configuration = context.app.get('authentication');
+        const configuration = context.app.get('authentication') as AuthConfig;
 
         //TODO: add displayAbilities here to ensure the list is not redundant in abilities
         const reqs: Array<RequiredCapability> = (requiredCapabilities || []).map(a => {
@@ -134,13 +149,13 @@ export const ucanAuth = <S>(requiredCapabilities?: UcanCap, options?: UcanAuthOp
             const {creatorPass, loginPass} = options || {creatorPass: false}
             if ((creatorPass && (creatorPass === '*' || (creatorPass as Array<string>).includes(context.method))) || (loginPass?.length && (loginPass[1] === '*' || loginPass[1].includes(context.method)))) {
 
-                const existing = await new CoreCall(context.path, context, {skipJoins: true}).get(context.id);
+                const existing = await new CoreCall(context.path, context, {skipJoins: true}).get(context.id as NullableId);
 
                 if (creatorPass) {
-                    v.ok = (existing?.createdBy?.login) === (context.login?._id || '***');
+                    v.ok = (_get(existing, ['createdBy', configuration.entity])) === (_get(context, [configuration.entity, '_id']) || '***');
                 } else if (loginPass) {
                     const arr = _flatten(loginPass[0].map(a => _get(existing, a) as any));
-                    v.ok = arr.filter((a: any) => !!a).includes(context.login?._id)
+                    v.ok = arr.filter((a: any) => !!a).includes(_get(context, [configuration.entity, '_id']))
                 }
             }
             if (!v?.ok) {
@@ -168,13 +183,13 @@ export const ucanAuth = <S>(requiredCapabilities?: UcanCap, options?: UcanAuthOp
 
 export const allUcanAuth = <S>(methods: UcanAllArgs, options?: UcanAuthOptions) => {
     return async (context: HookContext<S>): Promise<HookContext<S>> => {
-        const config = context.app.get('authentication');
-        const entity = context.auth[config.entity];
+        const config = context.app.get('authentication') as AuthConfig;
+        const entity = _get(context, ['auth', config.entity]);
         if (entity) context = _set(context, [config.core_path, config.entity], entity)
         if (context.type === 'before') {
             const {method} = context as { method: keyof UcanAllArgs } & HookContext<S>;
             if (methods[method as keyof UcanAllArgs] || methods['all']) {
-                return ucanAuth(methods[method] || methods['all'], options)(context) as any;
+                return await ucanAuth(methods[method] || methods['all'], options)(context) as any;
             } else return context;
         } else return context;
     }

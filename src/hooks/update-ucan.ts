@@ -20,12 +20,12 @@ export const updateUcan = () => {
         if(!add?.length && !remove?.length) throw new Error('No new capabilities passed');
 
         //check ability to edit the affected capabilities
-        const {secret, ucan_aud} = context.app.get('authentication');
+        const {secret, ucan_aud, entity, ucan} = context.app.get('authentication');
         const rootIssuer = encodeKeyPair({secretKey: secret}).did();
 
         const checkAbilities = stackAbilities([...add, ...remove]);
 
-        const canEdit = await verifyUcan(context.params.login.ucan, {
+        const canEdit = await verifyUcan(_get(context.params, [entity, ucan]) as string, {
             audience: _get(context.params, ucan_aud) as string,
             requiredCapabilities: checkAbilities.map(a => {
                 return {

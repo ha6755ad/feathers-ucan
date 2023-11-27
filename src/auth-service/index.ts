@@ -1,6 +1,7 @@
 import {_get, parseUcan, ucanToken, validateUcan, encodeKeyPair, buildUcan} from 'symbol-ucan';
 import {AuthenticationService, AuthenticationRequest, AuthenticationParams} from '@feathersjs/authentication';
 import {AnyObj} from '../types';
+import {NullableId} from '../core';
 
 export class NotAuthError extends Error {
     constructor(message?: string) {
@@ -75,7 +76,7 @@ export class AuthService extends AuthenticationService {
                 capabilities: parsed.payload.att
             })
             params.admin_pass = true;
-            await this.app.service(service).patch(authResult[entity]._id, {[ucan_path]: ucanToken(ucan)}, {...params})
+            await this.app.service(service).patch(_get(authResult, [entity, '_id']) as NullableId, {[ucan_path]: ucanToken(ucan)}, {...params})
         }
 
 
