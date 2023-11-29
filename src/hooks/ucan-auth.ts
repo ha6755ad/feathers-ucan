@@ -22,7 +22,7 @@ export type UcanAuthConfig = {
 }
 
 type AuthConfig = {
-    [key:string]: string
+    [key: string]: string
 }
 
 type AnyAuth = '*'
@@ -57,7 +57,7 @@ type Auth = <S>(method: string) => (context: HookContext<S>) => Promise<HookCont
 type Config = { entity: string, service: string, defaultScheme: string, defaultHierPart: string };
 type VerifyRes = { ok: boolean, value?: Array<any>, err?: Array<any> };
 
-export const noThrowAuth = async <S>(context: HookContext<S>):Promise<HookContext<S>> => {
+export const noThrowAuth = async <S>(context: HookContext<S>): Promise<HookContext<S>> => {
     const config = context.app.get('authentication') as AuthConfig;
     const entity = _get(context, ['auth', config.entity]);
     if (entity) context = _set(context, [config.core_path, config.entity], entity)
@@ -69,14 +69,14 @@ export const noThrowAuth = async <S>(context: HookContext<S>):Promise<HookContex
     return context;
 }
 
-export const bareAuth = async <S>(context: HookContext<S>):Promise<HookContext<S>> => {
+export const bareAuth = async <S>(context: HookContext<S>): Promise<HookContext<S>> => {
     const config = context.app.get('authentication') as AuthConfig;
     const entity = _get(context, ['auth', config.entity]);
     if (entity) context = _set(context, [config.core_path, config.entity], entity)
     return authenticate('jwt')(context as any);
 }
 
-export const orVerifyLoop = async (arr: Array<VerifyOne>):Promise<VerifyRes> => {
+export const orVerifyLoop = async (arr: Array<VerifyOne>): Promise<VerifyRes> => {
     let v: any = {ok: false, value: []};
     const verifyOne = async (ucan: string, options: VerifyOptions) => {
         return await verifyUcan(ucan, options);
@@ -93,12 +93,12 @@ export const orVerifyLoop = async (arr: Array<VerifyOne>):Promise<VerifyRes> => 
 export type VerifyConfig = {
     client_ucan: string,
     ucan_aud: string,
-    [key:string]: any
+    [key: string]: any
 };
-export const verifyAgainstReqs = <S>(reqs: Array<RequiredCapability>, config:VerifyConfig, options?: UcanAuthOptions) => {
-    const ucan = config.client_ucan;
-    const audience = config.ucan_aud;
+export const verifyAgainstReqs = <S>(reqs: Array<RequiredCapability>, config: VerifyConfig, options?: UcanAuthOptions) => {
     return async (context: HookContext<S>): Promise<VerifyRes> => {
+        const ucan = _get(context.params, config.client_ucan) as string;
+        const audience = _get(context.params, config.ucan_aud) as string;
         if (ucan && audience && options?.or?.includes(context.method)) {
             return await orVerifyLoop((reqs || []).map(a => {
                 return {
@@ -111,14 +111,14 @@ export const verifyAgainstReqs = <S>(reqs: Array<RequiredCapability>, config:Ver
     }
 }
 
-export type CapapilityModelConfig = {
+export type CapabilityModelConfig = {
     defaultScheme: string,
     defaultHierPart: string,
     secret: string,
-    [key:string]:any
+    [key: string]: any
 };
 
-export const modelCapabilities = (reqs: Array<CapabilityParts>, config:CapapilityModelConfig):Array<RequiredCapability> => {
+export const modelCapabilities = (reqs: Array<CapabilityParts>, config: CapabilityModelConfig): Array<RequiredCapability> => {
 
     const rootIssuer = encodeKeyPair({secretKey: config.secret}).did();
 
@@ -145,10 +145,10 @@ export const ucanAuth = <S>(requiredCapabilities?: UcanCap, options?: UcanAuthOp
 
         const configuration = context.app.get('authentication');
 
-        const reqs: Array<RequiredCapability> = modelCapabilities(requiredCapabilities as Array<CapabilityParts>, configuration as CapapilityModelConfig);
+        const reqs: Array<RequiredCapability> = modelCapabilities(requiredCapabilities as Array<CapabilityParts>, configuration as CapabilityModelConfig);
 
         if (reqs.length) {
-            v = verifyAgainstReqs(reqs, configuration as VerifyConfig, options)
+            v = verifyAgainstReqs(reqs, configuration as VerifyConfig, options)(context)
         } else v.ok = true;
         if (v?.ok) return context
         else {
@@ -176,7 +176,7 @@ export const ucanAuth = <S>(requiredCapabilities?: UcanCap, options?: UcanAuthOp
                     }
                     reducedReqs.push(req)
                 })
-                if (hasSplitNamespace) v = verifyAgainstReqs(reqs, configuration as VerifyConfig, options);
+                if (hasSplitNamespace) v = verifyAgainstReqs(reqs, configuration as VerifyConfig, options)(context);
             }
             if (v.ok) return context;
             else {
