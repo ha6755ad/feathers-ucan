@@ -90,8 +90,14 @@ export const orVerifyLoop = async (arr: Array<VerifyOne>):Promise<VerifyRes> => 
     return v;
 }
 
-
-export const verifyAgainstReqs = <S>(ucan: string, audience: string, reqs: Array<RequiredCapability>, options?: UcanAuthOptions) => {
+export type VerifyConfig = {
+    client_ucan: string,
+    ucan_aud: string,
+    [key:string]: any
+};
+export const verifyAgainstReqs = <S>(reqs: Array<RequiredCapability>, config:VerifyConfig, options?: UcanAuthOptions) => {
+    const ucan = config.client_ucan;
+    const audience = config.ucan_aud;
     return async (context: HookContext<S>): Promise<VerifyRes> => {
         if (ucan && audience && options?.or?.includes(context.method)) {
             return await orVerifyLoop((reqs || []).map(a => {
@@ -105,6 +111,28 @@ export const verifyAgainstReqs = <S>(ucan: string, audience: string, reqs: Array
     }
 }
 
+export type CapapilityModelConfig = {
+    defaultScheme: string,
+    defaultHierPart: string,
+    secret: string,
+    [key:string]:any
+};
+
+export const modelCapabilities = (reqs: Array<CapabilityParts>, config:CapapilityModelConfig):Array<RequiredCapability> => {
+
+    const rootIssuer = encodeKeyPair({secretKey: config.secret}).did();
+
+    return (reqs || []).map(a => {
+        return {
+            capability: Array.isArray(a) ? genCapability({
+                with: {scheme: config.defaultScheme, hierPart: config.defaultHierPart},
+                can: {namespace: a[0], segments: typeof a[1] === 'string' ? [a[1]] : a[1]}
+            }, config) : genCapability(a, config),
+            rootIssuer
+        };
+    }) as Array<RequiredCapability>
+};
+
 export const ucanAuth = <S>(requiredCapabilities?: UcanCap, options?: UcanAuthOptions) => {
     return async (context: HookContext<S>): Promise<HookContext<S>> => {
         //Below for passing through auth with no required capabilities
@@ -112,36 +140,15 @@ export const ucanAuth = <S>(requiredCapabilities?: UcanCap, options?: UcanAuthOp
         context = await bareAuth(context);
         if (requiredCapabilities === anyAuth) return context;
         if (options?.adminPass && _get(context.params, 'admin_pass') as any) return context;
-        const {secret} = context.app.get('authentication') as {
-            [key: string]: any
-        };
 
         let v: any = {ok: false, value: []};
 
-        const rootIssuer = encodeKeyPair({secretKey: secret}).did();
+        const configuration = context.app.get('authentication');
 
-        const configuration = context.app.get('authentication') as AuthConfig;
-
-        //TODO: add displayAbilities here to ensure the list is not redundant in abilities
-        const reqs: Array<RequiredCapability> = (requiredCapabilities || []).map(a => {
-            const config = {
-                defaultScheme: configuration.defaultScheme,
-                defaultHierPart: configuration.defaultHierPart
-            };
-            return {
-                capability: Array.isArray(a) ? genCapability({
-                    with: {scheme: configuration.defaultScheme, hierPart: configuration.defaultHierPart},
-                    can: {namespace: a[0], segments: typeof a[1] === 'string' ? [a[1]] : a[1]}
-                }, config) : genCapability(a, config),
-                rootIssuer
-            };
-        }) as Array<RequiredCapability>
-
-        const ucan = _get(context.params, configuration.client_ucan) as string;
-        const audience = _get(context.params, configuration.ucan_aud) as string;
+        const reqs: Array<RequiredCapability> = modelCapabilities(requiredCapabilities as Array<CapabilityParts>, configuration as CapapilityModelConfig);
 
         if (reqs.length) {
-            v = verifyAgainstReqs(ucan, audience, reqs, options)
+            v = verifyAgainstReqs(reqs, configuration as VerifyConfig, options)
         } else v.ok = true;
         if (v?.ok) return context
         else {
@@ -169,7 +176,7 @@ export const ucanAuth = <S>(requiredCapabilities?: UcanCap, options?: UcanAuthOp
                     }
                     reducedReqs.push(req)
                 })
-                if (hasSplitNamespace) v = verifyAgainstReqs(ucan, audience, reqs, options);
+                if (hasSplitNamespace) v = verifyAgainstReqs(reqs, configuration as VerifyConfig, options);
             }
             if (v.ok) return context;
             else {
