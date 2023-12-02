@@ -135,15 +135,15 @@ export const modelCapabilities = (reqs: Array<CapabilityParts>, config: Capabili
 
 export const ucanAuth = <S>(requiredCapabilities?: UcanCap, options?: UcanAuthOptions) => {
     return async (context: HookContext<S>): Promise<HookContext<S>> => {
+        const configuration = context.app.get('authentication');
+
         //Below for passing through auth with no required capabilities
         if (requiredCapabilities === noThrow) return await noThrowAuth(context);
         context = await bareAuth(context);
         if (requiredCapabilities === anyAuth) return context;
-        if (options?.adminPass && _get(context.params, 'admin_pass') as any) return context;
+        if ((options?.adminPass || []).includes(context.method) && (_get(context.params, 'admin_pass') || _get(context.params, [configuration.core_path, 'admin_pass'])) as any) return context;
 
         let v: any = {ok: false, value: []};
-
-        const configuration = context.app.get('authentication');
 
         const reqs: Array<RequiredCapability> = modelCapabilities(requiredCapabilities as Array<CapabilityParts>, configuration as CapabilityModelConfig);
 
