@@ -1,4 +1,4 @@
-import {HookContext} from '../types';
+import {HookContext, AnyObj} from '../types';
 import {authenticate} from '@feathersjs/authentication';
 import {
     Capability,
@@ -135,7 +135,7 @@ export const modelCapabilities = (reqs: Array<CapabilityParts>, config: Capabili
 
 export const ucanAuth = <S>(requiredCapabilities?: UcanCap, options?: UcanAuthOptions) => {
     return async (context: HookContext<S>): Promise<HookContext<S>> => {
-        const configuration = context.app.get('authentication');
+        const configuration = context.app.get('authentication') as AnyObj;
 
         //Below for passing through auth with no required capabilities
         if (requiredCapabilities === noThrow) return await noThrowAuth(context);
@@ -148,7 +148,7 @@ export const ucanAuth = <S>(requiredCapabilities?: UcanCap, options?: UcanAuthOp
         const reqs: Array<RequiredCapability> = modelCapabilities(requiredCapabilities as Array<CapabilityParts>, configuration as CapabilityModelConfig);
 
         if (reqs.length) {
-            v = verifyAgainstReqs(reqs, configuration as VerifyConfig, options)(context)
+            v = await verifyAgainstReqs(reqs, configuration as VerifyConfig, options)(context)
         } else v.ok = true;
         if (v?.ok) return context
         else {
@@ -176,7 +176,7 @@ export const ucanAuth = <S>(requiredCapabilities?: UcanCap, options?: UcanAuthOp
                     }
                     reducedReqs.push(req)
                 })
-                if (hasSplitNamespace) v = verifyAgainstReqs(reqs, configuration as VerifyConfig, options)(context);
+                if (hasSplitNamespace) v = await verifyAgainstReqs(reqs, configuration as VerifyConfig, options)(context);
             }
             if (v.ok) return context;
             else {
