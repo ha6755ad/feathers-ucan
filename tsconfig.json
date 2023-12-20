@@ -1,8 +1,8 @@
 {
   "compilerOptions": {
     "moduleResolution": "node",
-    "target": "esNext",
-    "module": "esNext",
+    "target": "ESNext",
+    "module": "ESNext",
     "lib": [
       "dom",
       "es2021",
@@ -24,8 +24,8 @@
   "exclude": ["node_modules"],
   "ts-node": {
     "compilerOptions": {
-      "target": "esNext",
-      "module": "esNext"
+      "target": "es2022",
+      "module": "es2022"
     }
   }
 }
