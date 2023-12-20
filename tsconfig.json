@@ -24,8 +24,8 @@
   "exclude": ["node_modules"],
   "ts-node": {
     "compilerOptions": {
-      "target": "es2022",
-      "module": "es2022"
+      "target": "es6",
+      "module": "es6"
     }
   }
 }
