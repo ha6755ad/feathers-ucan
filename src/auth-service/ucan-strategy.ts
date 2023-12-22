@@ -1,13 +1,14 @@
 import {IncomingMessage} from 'http';
 import {
+    AuthenticationBase,
     AuthenticationBaseStrategy,
-    ConnectionEvent,
+    AuthenticationRequest,
     AuthenticationResult,
-    AuthenticationBase, AuthenticationRequest
+    ConnectionEvent
 } from '@feathersjs/authentication';
 // @ts-ignore
 import lt from 'long-timeout';
-import {validateUcan, ucanToken, _unset, _get} from 'symbol-ucan';
+import {_get, _unset, ucanToken, validateUcan} from 'symbol-ucan';
 
 export class NotAuthError extends Error {
     constructor(message?: string) {
@@ -144,7 +145,7 @@ export class UcanStrategy extends AuthenticationBaseStrategy {
                 query: {...query, $limit: 1},
                 [core_path]: {skipJoins: true, ..._params[core_path]}
             }
-            const entities = await this.app?.service(service).find(pms as any);
+            const entities = await this.app?.service(service).find({...pms, skipJoins: true} as any);
             if (entities.total) return entities.data[0]._id;
             else throw new NotAuthError('Could not find login associated with this ucan');
         }
