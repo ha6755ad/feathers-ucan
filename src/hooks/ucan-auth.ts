@@ -1,7 +1,7 @@
 import {AnyObj, HookContext} from '../types';
 import {authenticate} from '@feathersjs/authentication';
 import {_flatten, _get, _set, Capability, encodeKeyPair, genCapability, VerifyOptions, verifyUcan} from 'symbol-ucan';
-import {CoreCall, NullableId} from '../core';
+import {loadExists} from '../utils';
 
 export type UcanAuthConfig = {
     entity: string,
@@ -149,7 +149,7 @@ export const ucanAuth = <S>(requiredCapabilities?: UcanCap, options?: UcanAuthOp
             const {creatorPass, loginPass} = options || {creatorPass: false}
             if ((creatorPass && (creatorPass === '*' || (creatorPass as Array<string>).includes(context.method))) || (loginPass?.length && (loginPass[1] === '*' || loginPass[1].includes(context.method)))) {
 
-                const existing = await new CoreCall(context.path, context, {skipJoins: true}).get(context.id as NullableId);
+                const existing = await loadExists(context);
 
                 if (creatorPass) {
                     v.ok = (_get(existing, ['createdBy', configuration.entity])) === (_get(context, [configuration.entity, '_id']) || '***');
