@@ -7,10 +7,10 @@ export const getExists = (context:Partial<HookContext>):any => {
     return context.params ? context.params[`${path}:${context.path}`] : undefined;
 }
 
-export const loadExists = async (context:HookContext):Promise<any> => {
+export const loadExists = async (context:HookContext, options?:{ skipJoins: boolean }):Promise<any> => {
     let ex = getExists(context);
     if(!ex && context.id) {
-        ex = await new CoreCall(context.path, context, { skipJoins: true }).get(context.id, { admin_pass: true })
+        ex = await new CoreCall(context.path, context, { skipJoins: options?.skipJoins !== false }).get(context.id, { admin_pass: true })
     }
     return ex;
 }
