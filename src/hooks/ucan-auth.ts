@@ -130,9 +130,10 @@ export const ucanAuth = <S>(requiredCapabilities?: UcanCap, options?: UcanAuthOp
     return async (context: HookContext<S>): Promise<HookContext<S>> => {
         const configuration = context.app.get('authentication') as AnyObj;
 
+        const loginId = context.params?.login?._id;
         //Below for passing through auth with no required capabilities
-        if (requiredCapabilities === noThrow) return await noThrowAuth(context);
-        context = await bareAuth(context);
+        if (requiredCapabilities === noThrow) return loginId ? context : await noThrowAuth(context);
+        if(!loginId) context = await bareAuth(context);
         if (requiredCapabilities === anyAuth) return context;
         if ((options?.adminPass || []).includes(context.method) && (_get(context.params, 'admin_pass') || _get(context.params, [configuration.core_path, 'admin_pass'])) as any) return context;
 
