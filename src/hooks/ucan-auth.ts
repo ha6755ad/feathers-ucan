@@ -157,8 +157,7 @@ export const ucanAuth = <S>(requiredCapabilities?: UcanCap, options?: UcanAuthOp
                 } else if (loginPass) {
                     const arr = _flatten((loginPass[0] || []).map(a => _get(existing, a) as any).filter(a => !!a).map(a => Array.isArray(a) ? a : [a])) as Array<any>;
                     const id = _get(context.params, [configuration.entity, '_id']) as any;
-                    const arr2 = arr.filter((a:any) => !!a);
-                    v.ok = arr2.map(a => String(a)).includes(String(id))
+                    v.ok = arr.map(a => String(a)).includes(String(id))
                 }
             }
             if (!v?.ok) {
