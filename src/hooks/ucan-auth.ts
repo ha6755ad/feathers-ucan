@@ -155,7 +155,7 @@ export const ucanAuth = <S>(requiredCapabilities?: UcanCap, options?: UcanAuthOp
                 if (creatorPass) {
                     v.ok = (_get(existing, ['createdBy', configuration.entity])) === (_get(context, [configuration.entity, '_id']) || '***');
                 } else if (loginPass) {
-                    const arr = _flatten((loginPass[0] || []).map(a => _get(existing, a) as any).map(a => Array.isArray(a) ? a : [a])) as Array<any>;
+                    const arr = _flatten((loginPass[0] || []).map(a => _get(existing, a) as any).filter(a => !!a).map(a => Array.isArray(a) ? a : [a])) as Array<any>;
                     const id = _get(context.params, [configuration.entity, '_id']) as any;
                     const arr2 = arr.filter((a:any) => !!a);
                     v.ok = arr2.map(a => String(a)).includes(String(id))
