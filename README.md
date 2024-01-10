@@ -115,13 +115,13 @@ declare type UcanAuthOptions = {
     creatorPass?: '*' | Array<string>,
     loginPass?: [Array<string>, Array<string> | '*'],
     or?: Array<string>,
-		adminPass?: Array<string>
+    adminPass?: Array<string>
 }
 ```
 
 ### This section needs to be reworked to be open-sourcable. This is too specific to our internal material still
 - **************************creatorPass:************************** allows for a pass if the `login._id` calling the method is the same as the record in question `record.createdBy.login`
-- **********************loginPass:********************** allows for a free pass list of record paths that match the `login._id` calling the method. The first element of the array are the paths such as `[owner.id]` (dot notation for nested paths). In the future we expect to add `$in` functionality that can handle nested arrays as well (the current version will pass an array that includes the correct id, but only a flat array of simple ObjectIds).  The second element are the methods you want to allow this on ie: `['patch', 'create']`Use the `*` superuser for allowing all methods to pass.
+- **********************loginPass:********************** allows for a free pass list of record paths that match the `login._id` calling the method. The first element of the array are the paths such as `[owner.id]` (dot notation for nested paths). In the future we expect to add `$in` functionality that can handle nested arrays as well (the current version will pass an array that includes the correct id, but only a flat array of simple ObjectIds).  The second element are the methods you want to allow this on ie: `['patch', 'create']`Use the `*` superuser for allowing all methods to pass. If you want more granular field permissions - such as only allowing `patch` for the fields `color` and `name`, we support that. You would write the second argument of loginPass with a `patch/color,name` as follows (this is the full loginPass argument to avoid confusion here) [[{first argument}], ['patch/color,name', 'create']] (allowed for create as well just to illustrate how this is used);
 - ********or:******** explains to run the `Capability` configuration passed to the ********allUcanAuth methods******** to be run as an or scenario instead of and. This is a significant extension of how ucans otherwise work. It will run multiple verify methods and if any pass, the auth will pass.
 - **********adminPass:********** allow internal call overrides of ucan requirements. This is important for writing functions that internal operations may need to perform like removing a created org if a hook isn’t successful. Calling this requires passing an array of methods as the value of the admin option (`Array<string>`) as well as setting `context.params.admin_pass` to `true` from within the feathers app (no client side overrides). The value of this property is an array of methods to allow `admin_pass` params on.
 

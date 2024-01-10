@@ -1,7 +1,7 @@
 import {AnyObj, HookContext} from '../types';
 import {authenticate} from '@feathersjs/authentication';
 import {_flatten, _get, _set, Capability, encodeKeyPair, genCapability, VerifyOptions, verifyUcan} from 'symbol-ucan';
-import {loadExists} from '../utils';
+import {loadExists, setExists} from '../utils';
 
 export type UcanAuthConfig = {
     entity: string,
@@ -133,7 +133,7 @@ export const ucanAuth = <S>(requiredCapabilities?: UcanCap, options?: UcanAuthOp
         const loginId = context.params?.login?._id;
         //Below for passing through auth with no required capabilities
         if (requiredCapabilities === noThrow) return loginId ? context : await noThrowAuth(context);
-        if(!loginId) context = await bareAuth(context);
+        if (!loginId) context = await bareAuth(context);
         if (requiredCapabilities === anyAuth) return context;
         if ((options?.adminPass || []).includes(context.method) && (_get(context.params, 'admin_pass') || _get(context.params, [configuration.core_path, 'admin_pass'])) as any) return context;
 
@@ -147,17 +147,42 @@ export const ucanAuth = <S>(requiredCapabilities?: UcanCap, options?: UcanAuthOp
         if (v?.ok) return context
         else {
             //If creator pass enabled, check to see if the auth login is the creator of the record
-            const {creatorPass, loginPass} = options || {creatorPass: false}
-            if ((creatorPass && (creatorPass === '*' || (creatorPass as Array<string>).includes(context.method))) || (loginPass?.length && (loginPass[1] === '*' || loginPass[1].includes(context.method)))) {
+            const {loginPass} = options || {loginPass: [['*'], ['nonExistentMethod']]}
+            if (loginPass?.length) {
+                let methodsOnly = [];
+                if(loginPass[1] === '*') methodsOnly = [context.method];
+                else methodsOnly = loginPass[1].map(a => a.split('/')[0]);
+                const methodIdx = methodsOnly.indexOf(context.method);
+                if (methodIdx > -1) {
 
-                const existing = await loadExists(context);
+                    const existing = await loadExists(context);
+                    context = setExists(context, existing);
 
-                if (creatorPass) {
-                    v.ok = (_get(existing, ['createdBy', configuration.entity])) === (_get(context, [configuration.entity, '_id']) || '***');
-                } else if (loginPass) {
-                    const arr = _flatten((loginPass[0] || []).map(a => _get(existing, a) as any).filter(a => !!a).map(a => Array.isArray(a) ? a : [a])) as Array<any>;
-                    const id = _get(context.params, [configuration.entity, '_id']) as any;
-                    v.ok = arr.map(a => String(a)).includes(String(id))
+                    if (loginPass) {
+                        const arr = _flatten((loginPass[0] || []).map(a => _get(existing, a) as any).filter(a => !!a).map(a => Array.isArray(a) ? a : [a])) as Array<any>;
+                        const id = _get(context.params, [configuration.entity, '_id']) as any;
+                        const loginOk = arr.map(a => String(a)).includes(String(id));
+                        if (loginOk) {
+                            //Check for granular field permissions such as patch/owner,color,status
+                            if (loginPass[1] === '*' || ['find','get','remove'].includes(context.method)) v.ok = true;
+                            else {
+                               const fields = loginPass[1][methodIdx].split(',') || [];
+                               let scrubbedData:AnyObj = {};
+                               for(const field of fields){
+                                   const topLevel = _get(context.data, field);
+                                   if(topLevel) scrubbedData = _set(scrubbedData, field, topLevel);
+                                   else {
+                                       for(const operator of ['$addToSet', '$pull']){
+                                           const operatorLevel = _get(context.data, `${operator}.${field}`);
+                                           if(operatorLevel) scrubbedData = _set(scrubbedData, `${operator}.${field}`, operatorLevel);
+                                       }
+                                   }
+                               }
+                               context = _set(context, 'data', scrubbedData);
+                               return context;
+                            }
+                        }
+                    }
                 }
             }
             if (!v?.ok) {
