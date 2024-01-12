@@ -4,7 +4,7 @@ import {CoreCall} from '../core';
 
 export const getExists = (context:Partial<HookContext>):any => {
     const path = context.app.get('existsPath') || existsPath;
-    return context.params ? context.params[`${path}:${context.path}`] : undefined;
+    return context.params ? context.params[`${path}_${context.path}`] : undefined;
 }
 
 export const loadExists = async (context:HookContext, options?:{ skipJoins: boolean }):Promise<any> => {
@@ -17,6 +17,6 @@ export const loadExists = async (context:HookContext, options?:{ skipJoins: bool
 
 export const setExists = (context:HookContext, val:any):HookContext => {
     const path = context.app.get('existsPath') || existsPath;
-    context.params[`${path}:${context.path}`] = val;
+    context.params[`${path}_${context.path}`] = val;
     return context;
 };
