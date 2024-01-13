@@ -1,10 +1,12 @@
-export const existsPath = '_exists';
+import {_get, _set} from 'symbol-ucan';
 import {HookContext} from '../types';
 import {CoreCall} from '../core';
 
+export const existsPath = '_exists';
+
 export const getExists = (context:Partial<HookContext>):any => {
     const path = context.app.get('existsPath') || existsPath;
-    return context.params ? context.params[`${path}_${context.path}`] : undefined;
+    return _get(context.params, `${path}.${context.path}.${context.id}`) || undefined;
 }
 
 export const loadExists = async (context:HookContext, options?:{ skipJoins: boolean }):Promise<any> => {
@@ -17,6 +19,6 @@ export const loadExists = async (context:HookContext, options?:{ skipJoins: bool
 
 export const setExists = (context:HookContext, val:any):HookContext => {
     const path = context.app.get('existsPath') || existsPath;
-    context.params[`${path}_${context.path}`] = val;
+    context.params = _set(context.params, `${path}.${context.path}.${val._id || context.id}`, val)
     return context;
 };
