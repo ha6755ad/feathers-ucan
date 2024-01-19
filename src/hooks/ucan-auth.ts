@@ -26,9 +26,10 @@ export const noThrow: NoThrow = '$' as NoThrow;
 
 export type CapabilityParts = Partial<Capability> | [string, Array<string> | string];
 
-declare type UcanAuthOptions = {
+export declare type LoginPassOption = [Array<string>, Array<string> | '*']
+export declare type UcanAuthOptions = {
     creatorPass?: '*' | Array<string>,
-    loginPass?: [Array<string>, Array<string> | '*'],
+    loginPass?: Array<LoginPassOption>,
     or?: Array<string>
     adminPass?: Array<string>
 }
@@ -147,43 +148,67 @@ export const ucanAuth = <S>(requiredCapabilities?: UcanCap, options?: UcanAuthOp
         if (v?.ok) return context
         else {
             //If creator pass enabled, check to see if the auth login is the creator of the record
-            const {loginPass} = options || {loginPass: [['*'], ['nonExistentMethod']]}
+            const {loginPass} = options || {loginPass: [[['*'], ['nonExistentMethod']]]}
             if (loginPass?.length) {
-                let methodsOnly = [];
-                if(loginPass[1] === '*') methodsOnly = [context.method];
-                else methodsOnly = loginPass[1].map(a => a.split('/')[0]);
-                const methodIdx = methodsOnly.indexOf(context.method);
-                if (methodIdx > -1) {
+                //object of scrubbed data object for pass that includes only limited access or full context.data object if no limits were present
+                let scrubbedData: AnyObj = {};
+                //scruData defaults to true - is only set to false
+                let scrubData = true;
+                const checkLoginPass = async (lpass: LoginPassOption) => {
+                    let methodsOnly = [];
+                    const allMethods = lpass[1] === '*';
+                    let methodIdx = -1;
+                    if (allMethods) methodIdx = 0;
+                    else {
+                        //separate out any field specific methods e.g. patch/name,avatar
+                        methodsOnly = (lpass[1] as string[]).map(a => a.split('/')[0]);
+                        methodIdx = methodsOnly.indexOf(context.method);
+                    }
+                    //ensure loginPass is allowed for this method
+                    if (methodIdx > -1) {
 
-                    const existing = await loadExists(context);
-                    context = setExists(context, existing);
+                        //retrieve existing record to check ids for login id
+                        const existing = await loadExists(context);
+                        context = setExists(context, existing);
 
-                    if (loginPass) {
-                        const arr = _flatten((loginPass[0] || []).map(a => _get(existing, a) as any).filter(a => !!a).map(a => Array.isArray(a) ? a : [a])) as Array<any>;
+                        //perform the check
+                        const arr = _flatten((lpass[0] || []).map(a => _get(existing, a) as any).filter(a => !!a).map(a => Array.isArray(a) ? a : [a])) as Array<any>;
                         const id = _get(context.params, [configuration.entity, '_id']) as any;
                         const loginOk = arr.map(a => String(a)).includes(String(id));
+
                         if (loginOk) {
-                            //Check for granular field permissions such as patch/owner,color,status
-                            if (loginPass[1] === '*' || ['find','get','remove'].includes(context.method)) v.ok = true;
-                            else {
-                               const fields = loginPass[1][methodIdx].split(',') || [];
-                               let scrubbedData:AnyObj = {};
-                               for(const field of fields){
-                                   const topLevel = _get(context.data, field);
-                                   if(topLevel) scrubbedData = _set(scrubbedData, field, topLevel);
-                                   else {
-                                       for(const operator of ['$addToSet', '$pull']){
-                                           const operatorLevel = _get(context.data, `${operator}.${field}`);
-                                           if(operatorLevel) scrubbedData = _set(scrubbedData, `${operator}.${field}`, operatorLevel);
-                                       }
-                                   }
-                               }
-                               context = _set(context, 'data', scrubbedData);
-                               return context;
-                            }
+                            v.ok = true
+                            //loginPass is true - but check for granular field permissions such as patch/owner,color,status that imply limited permission
+                            //TODO: possibly a throw option here. If loginPass is ok, it will go forward, but could send an empty or modified patch object
+                            if (!(lpass[1] === '*' || ['find', 'get', 'remove'].some(a => lpass[1].includes(a)))) {
+                                const currentMethod = allMethods ? '*' : lpass[1][methodIdx];
+                                const splitMethod = currentMethod.split('/')[0];
+                                //check if current method contains a split '/' signaling limited permission check
+                                if (splitMethod !== currentMethod) {
+                                    //get an array of the allowed fields
+                                    const fields = currentMethod.split('/').slice(1).join('').split(',') || [];
+
+                                    for (const field of fields) {
+                                        const topLevel = _get(context.data, field);
+                                        if (topLevel) scrubbedData = _set(scrubbedData, field, topLevel);
+                                        else {
+                                            for (const operator of ['$addToSet', '$pull']) {
+                                                const operatorLevel = _get(context.data, `${operator}.${field}`);
+                                                if (operatorLevel) scrubbedData = _set(scrubbedData, `${operator}.${field}`, operatorLevel);
+                                            }
+                                        }
+                                    }
+                                } else scrubData = false;
+                            } else scrubData = false;
                         }
                     }
                 }
+
+                for await (const lpass of loginPass) {
+                    if (scrubData) await checkLoginPass(lpass);
+                    else break;
+                }
+                if (scrubData) context = _set(context, 'data', scrubbedData);
             }
             if (!v?.ok) {
                 let hasSplitNamespace = false;
