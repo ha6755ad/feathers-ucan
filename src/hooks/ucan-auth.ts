@@ -56,8 +56,7 @@ export const noThrowAuth = async <S>(context: HookContext<S>): Promise<HookConte
     const entity = _get(context, ['auth', config.entity]);
     if (entity) context = _set(context, [config.core_path, config.entity], entity)
     context = await authenticate('jwt')(context as any)
-        .catch((err: any) => {
-            console.error('got error in no throw auth', err);
+        .catch(() => {
             return context;
         })
     return context;
