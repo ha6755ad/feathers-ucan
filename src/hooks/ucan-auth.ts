@@ -31,7 +31,8 @@ export declare type UcanAuthOptions = {
     creatorPass?: '*' | Array<string>,
     loginPass?: Array<LoginPassOption>,
     or?: Array<string>
-    adminPass?: Array<string>
+    adminPass?: Array<string>,
+    noThrow?:boolean
 }
 type RequiredCapability = { capability: Capability, rootIssuer: string }
 export type UcanCap = Array<CapabilityParts> | AnyAuth | NoThrow;
@@ -224,9 +225,12 @@ export const ucanAuth = <S>(requiredCapabilities?: UcanCap, options?: UcanAuthOp
             }
             if (v.ok) return context;
             else {
-
                 console.error('Ucan capabilities requirements not met: ', v, context.type, context.path);
-                throw new Error('Missing proper capabilities for this action: ' + context.type + ': ' + context.path + ' - ' + context.method);
+                if(!options?.noThrow) throw new Error('Missing proper capabilities for this action: ' + context.type + ': ' + context.path + ' - ' + context.method);
+                else {
+                    context.params._no_throw_error = { type: context.type, method: context.method, path: context.path }
+                    return context;
+                }
             }
         }
     }
