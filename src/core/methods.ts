@@ -23,8 +23,11 @@ export class CoreCall {
     constructor(service:string, context:any, coreOptions?:CoreOpts){
         this.service = service
         this.context = context
-        this.core = { ...context.params?.core, ...coreOptions }
-        this.entity = (context.app.get('authentication') || { entity: 'login' }).entity || 'login';
+        const entity = (context.app.get('authentication') || { entity: 'login' }).entity || 'login';
+        this.entity = entity;
+        const core = context.params?.core || {};
+        if(!core[entity]) core[entity] = context.params[entity];
+        this.core = { ...core }
     }
 
     async get(id:NullableId, params:AnyObj = {}){
