@@ -135,7 +135,10 @@ export const ucanAuth = <S>(requiredCapabilities?: UcanCap, options?: UcanAuthOp
         //Below for passing through auth with no required capabilities
         if (requiredCapabilities === noThrow) return loginId ? context : await noThrowAuth(context);
         if (!loginId) context = await bareAuth(context);
-        if (requiredCapabilities === anyAuth) return context;
+        if (requiredCapabilities === anyAuth) {
+            context.params.authenticated = true;
+            return context;
+        }
         if ((options?.adminPass || []).includes(context.method) && (_get(context.params, 'admin_pass') || _get(context.params, [configuration.core_path, 'admin_pass'])) as any) return context;
 
         let v: any = {ok: false, value: []};
@@ -145,7 +148,10 @@ export const ucanAuth = <S>(requiredCapabilities?: UcanCap, options?: UcanAuthOp
         if (reqs.length) {
             v = await verifyAgainstReqs(reqs, configuration as VerifyConfig, options)(context)
         } else v.ok = true;
-        if (v?.ok) return context
+        if (v?.ok) {
+            context.params.authenticated = true;
+            return context
+        }
         else {
             //If creator pass enabled, check to see if the auth login is the creator of the record
             const {loginPass} = options || {loginPass: [[['*'], ['nonExistentMethod']]]}
@@ -223,7 +229,10 @@ export const ucanAuth = <S>(requiredCapabilities?: UcanCap, options?: UcanAuthOp
                 })
                 if (hasSplitNamespace) v = await verifyAgainstReqs(reqs, configuration as VerifyConfig, options)(context);
             }
-            if (v.ok) return context;
+            if (v.ok) {
+                context.params.authenticated = true;
+                return context;
+            }
             else {
                 console.error('Ucan capabilities requirements not met: ', v, context.type, context.path);
                 if(!options?.noThrow) throw new Error('Missing proper capabilities for this action: ' + context.type + ': ' + context.path + ' - ' + context.method);
