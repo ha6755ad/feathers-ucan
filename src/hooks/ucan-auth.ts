@@ -32,7 +32,8 @@ export declare type UcanAuthOptions = {
     loginPass?: Array<LoginPassOption>,
     or?: Array<string>
     adminPass?: Array<string>,
-    noThrow?:boolean
+    noThrow?:boolean,
+    log?:boolean
 }
 type RequiredCapability = { capability: Capability, rootIssuer: string }
 export type UcanCap = Array<CapabilityParts> | AnyAuth | NoThrow;
@@ -130,8 +131,11 @@ export const modelCapabilities = (reqs: Array<CapabilityParts>, config: Capabili
 export const ucanAuth = <S>(requiredCapabilities?: UcanCap, options?: UcanAuthOptions) => {
     return async (context: HookContext<S>): Promise<HookContext<S>> => {
         const configuration = context.app.get('authentication') as AnyObj;
+        const core_path = configuration.core_path || 'core';
+        const entity = configuration.entity || 'login';
 
-        const loginId = context.params?.login?._id;
+        const {_id:loginId } = _get(context.params, [core_path, entity]) || context.params?.login || { _id: undefined }
+        if(options?.log) console.log('ucan auth', 'loginId', loginId, 'core_path', core_path, 'entity', entity, 'core', context.params[core_path], 'params login', context.params.login, 'required capabilities', requiredCapabilities);
         //Below for passing through auth with no required capabilities
         if (requiredCapabilities === noThrow) return loginId ? context : await noThrowAuth(context);
         if (!loginId) context = await bareAuth(context);
