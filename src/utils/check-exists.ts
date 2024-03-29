@@ -19,6 +19,6 @@ export const loadExists = async (context:HookContext, options?:{ skipJoins: bool
 
 export const setExists = (context:HookContext, val:any):HookContext => {
     const path = context.app.get('existsPath') || existsPath;
-    context.params = _set(context.params, `${path}.${context.path}.${val._id || context.id}`, val)
+    context.params = _set(context.params, `${path}.${context.path}.${val?._id || context.id}`, val)
     return context;
 };

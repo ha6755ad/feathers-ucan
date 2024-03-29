@@ -1,6 +1,6 @@
 import {AnyObj, HookContext} from '../types';
 import {authenticate} from '@feathersjs/authentication';
-import {_flatten, _get, _set, Capability, encodeKeyPair, genCapability, VerifyOptions, verifyUcan} from 'symbol-ucan';
+import {_get, _set, Capability, encodeKeyPair, genCapability, VerifyOptions, verifyUcan} from 'symbol-ucan';
 import {loadExists, setExists} from '../utils';
 
 export type UcanAuthConfig = {
@@ -32,8 +32,8 @@ export declare type UcanAuthOptions = {
     loginPass?: Array<LoginPassOption>,
     or?: Array<string>
     adminPass?: Array<string>,
-    noThrow?:boolean,
-    log?:boolean
+    noThrow?: boolean,
+    log?: boolean
 }
 type RequiredCapability = { capability: Capability, rootIssuer: string }
 export type UcanCap = Array<CapabilityParts> | AnyAuth | NoThrow;
@@ -134,8 +134,8 @@ export const ucanAuth = <S>(requiredCapabilities?: UcanCap, options?: UcanAuthOp
         const core_path = configuration.core_path || 'core';
         const entity = configuration.entity || 'login';
 
-        const {_id:loginId } = _get(context.params, [core_path, entity]) || context.params?.login || { _id: undefined }
-        if(options?.log) console.log('ucan auth', 'loginId', loginId, 'core_path', core_path, 'entity', entity, 'core', context.params[core_path], 'params login', context.params.login, 'required capabilities', requiredCapabilities);
+        const {_id: loginId} = _get(context.params, [core_path, entity]) || context.params?.login || {_id: undefined}
+        if (options?.log) console.log('ucan auth', 'loginId', loginId, 'core_path', core_path, 'entity', entity, 'core', context.params[core_path], 'params login', context.params.login, 'required capabilities', requiredCapabilities);
         //Below for passing through auth with no required capabilities
         if (requiredCapabilities === noThrow) return loginId ? context : await noThrowAuth(context);
         if (!loginId) context = await bareAuth(context);
@@ -155,8 +155,7 @@ export const ucanAuth = <S>(requiredCapabilities?: UcanCap, options?: UcanAuthOp
         if (v?.ok) {
             context.params.authenticated = true;
             return context
-        }
-        else {
+        } else {
             //If creator pass enabled, check to see if the auth login is the creator of the record
             const {loginPass} = options || {loginPass: [[['*'], ['nonExistentMethod']]]}
             if (loginPass?.length) {
@@ -179,12 +178,21 @@ export const ucanAuth = <S>(requiredCapabilities?: UcanCap, options?: UcanAuthOp
 
                         //retrieve existing record to check ids for login id
                         const existing = await loadExists(context);
-                        context = setExists(context, existing);
-
-                        //perform the check
-                        const arr = _flatten((lpass[0] || []).map(a => _get(existing, a) as any).filter(a => !!a).map(a => Array.isArray(a) ? a : [a])) as Array<any>;
-                        const id = _get(context.params, [configuration.entity, '_id']) as any;
-                        const loginOk = arr.map(a => String(a)).includes(String(id));
+                        let loginOk = false;
+                        if (existing) {
+                            context = setExists(context, existing);
+                            //perform the check
+                            for (const passPath of lpass[0] || []) {
+                                const spl = passPath.split('/');
+                                const recordLoginPassId = _get(existing, spl[0]);
+                                const loginIdPath = spl[1] || '_id';
+                                const loginCheckId = _get(context.params, `${configuration.entity}.${loginIdPath}`) as any;
+                                if (String(loginCheckId) === String(recordLoginPassId)) {
+                                    loginOk = true;
+                                    break;
+                                }
+                            }
+                        }
 
                         if (loginOk) {
                             v.ok = true
@@ -236,12 +244,11 @@ export const ucanAuth = <S>(requiredCapabilities?: UcanCap, options?: UcanAuthOp
             if (v.ok) {
                 context.params.authenticated = true;
                 return context;
-            }
-            else {
+            } else {
                 console.error('Ucan capabilities requirements not met: ', v, context.type, context.path);
-                if(!options?.noThrow) throw new Error('Missing proper capabilities for this action: ' + context.type + ': ' + context.path + ' - ' + context.method);
+                if (!options?.noThrow) throw new Error('Missing proper capabilities for this action: ' + context.type + ': ' + context.path + ' - ' + context.method);
                 else {
-                    context.params._no_throw_error = { type: context.type, method: context.method, path: context.path }
+                    context.params._no_throw_error = {type: context.type, method: context.method, path: context.path}
                     return context;
                 }
             }
