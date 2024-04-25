@@ -1,5 +1,5 @@
 import {_get, _set} from 'symbol-ucan';
-import {HookContext} from '../types';
+import {AnyObj, HookContext} from '../types';
 import {CoreCall} from '../core';
 
 export const existsPath = '_exists';
@@ -9,10 +9,10 @@ export const getExists = (context:Partial<HookContext>):any => {
     return _get(context.params, `${path}.${context.path}.${context.id}`) || undefined;
 }
 
-export const loadExists = async (context:HookContext, options?:{ skipJoins: boolean }):Promise<any> => {
+export const loadExists = async (context:HookContext, options?:{ skipJoins?: boolean, params?: AnyObj }):Promise<any> => {
     let ex = getExists(context);
     if(!ex && context.id) {
-        ex = await new CoreCall(context.path, context, { skipJoins: options?.skipJoins !== false }).get(context.id, { admin_pass: true })
+        ex = await new CoreCall(context.path, context, { skipJoins: options?.skipJoins !== false }).get(context.id, { admin_pass: true, ...options?.params || {} })
     }
     return ex;
 }
