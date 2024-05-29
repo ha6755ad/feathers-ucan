@@ -33,7 +33,8 @@ export declare type UcanAuthOptions = {
     or?: Array<string>
     adminPass?: Array<string>,
     noThrow?: boolean,
-    log?: boolean
+    log?: boolean,
+    existingParams?:AnyObj
 }
 type RequiredCapability = { capability: Capability, rootIssuer: string }
 export type UcanCap = Array<CapabilityParts> | AnyAuth | NoThrow;
@@ -177,7 +178,7 @@ export const ucanAuth = <S>(requiredCapabilities?: UcanCap, options?: UcanAuthOp
                     if (methodIdx > -1) {
 
                         //retrieve existing record to check ids for login id
-                        const existing = await loadExists(context);
+                        const existing = await loadExists(context, { params: options?.existingParams });
                         let loginOk = false;
                         if (existing) {
                             context = setExists(context, existing);
