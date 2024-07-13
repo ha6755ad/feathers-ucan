@@ -188,7 +188,8 @@ export const ucanAuth = <S>(requiredCapabilities?: UcanCap, options?: UcanAuthOp
                                 const recordLoginPassId = _get(existing, spl[0]);
                                 const loginIdPath = spl[1] || '_id';
                                 const loginCheckId = _get(context.params, `${configuration.entity}.${loginIdPath}`) as any;
-                                if (String(loginCheckId) === String(recordLoginPassId)) {
+                                const checkArr = Array.isArray(loginCheckId) ? loginCheckId.map(a => String(a)) : [String(loginCheckId)];
+                                if (checkArr.includes(String(recordLoginPassId))) {
                                     loginOk = true;
                                     break;
                                 }
