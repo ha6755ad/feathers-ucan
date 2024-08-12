@@ -34,7 +34,7 @@ export declare type UcanAuthOptions = {
     adminPass?: Array<string>,
     noThrow?: boolean,
     log?: boolean,
-    existingParams?:AnyObj
+    existingParams?: AnyObj
 }
 type RequiredCapability = { capability: Capability, rootIssuer: string }
 export type UcanCap = Array<CapabilityParts> | AnyAuth | NoThrow;
@@ -178,7 +178,7 @@ export const ucanAuth = <S>(requiredCapabilities?: UcanCap, options?: UcanAuthOp
                     if (methodIdx > -1) {
 
                         //retrieve existing record to check ids for login id
-                        const existing = await loadExists(context, { params: options?.existingParams });
+                        const existing = await loadExists(context, {params: options?.existingParams});
                         let loginOk = false;
                         if (existing) {
                             context = setExists(context, existing);
@@ -188,10 +188,25 @@ export const ucanAuth = <S>(requiredCapabilities?: UcanCap, options?: UcanAuthOp
                                 const recordLoginPassId = _get(existing, spl[0]);
                                 const loginIdPath = spl[1] || '_id';
                                 const loginCheckId = _get(context.params, `${configuration.entity}.${loginIdPath}`) as any;
-                                const checkArr = Array.isArray(loginCheckId) ? loginCheckId.map(a => String(a)) : [String(loginCheckId)];
-                                if (checkArr.includes(String(recordLoginPassId))) {
-                                    loginOk = true;
-                                    break;
+                                //Make sure both are present to avoid pass on undefined
+                                if (loginCheckId && recordLoginPassId) {
+                                    // change login path result to array no matter what
+                                    const checkArr = Array.isArray(loginCheckId) ? loginCheckId.map(a => String(a)) : [String(loginCheckId)];
+                                    if (Array.isArray(recordLoginPassId)) {
+                                        //loop through to see if there is a match present use for loops for performance instead of some
+                                        for (let i = 0; i < checkArr.length;) {
+                                            const checkId = String(checkArr[i])
+                                            for (let rl = 0; rl < recordLoginPassId.length;) {
+                                                const rlId = String(recordLoginPassId[rl]);
+                                                if (rlId === checkId) loginOk = true;
+                                                else rl++;
+                                            }
+                                            if(!loginOk) i++
+                                        }
+                                    } else if (checkArr.includes(String(recordLoginPassId))) {
+                                        loginOk = true;
+                                        break;
+                                    }
                                 }
                             }
                         }
