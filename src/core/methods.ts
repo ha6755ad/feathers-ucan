@@ -27,7 +27,7 @@ export class CoreCall {
         this.entity = entity;
         const core = context.params?.core || {};
         if(!core[entity]) core[entity] = context.params[entity];
-        this.core = { ...core }
+        this.core = { ...core, ...coreOptions }
     }
 
     async get(id:NullableId, params:AnyObj = {}){
