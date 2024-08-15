@@ -129,22 +129,12 @@ export const modelCapabilities = (reqs: Array<CapabilityParts>, config: Capabili
     }) as Array<RequiredCapability>
 };
 
-export const ucanAuth = <S>(requiredCapabilities?: UcanCap, options?: UcanAuthOptions) => {
-    return async (context: HookContext<S>): Promise<HookContext<S>> => {
-        const configuration = context.app.get('authentication') as AnyObj;
-        const core_path = configuration.core_path || 'core';
-        const entity = configuration.entity || 'login';
-
-        const {_id: loginId} = _get(context.params, [core_path, entity]) || context.params?.login || {_id: undefined}
-        if (options?.log) console.log('ucan auth', 'loginId', loginId, 'core_path', core_path, 'entity', entity, 'core', context.params[core_path], 'params login', context.params.login, 'required capabilities', requiredCapabilities);
-        //Below for passing through auth with no required capabilities
-        if (requiredCapabilities === noThrow) return loginId ? context : await noThrowAuth(context);
-        if (!loginId) context = await bareAuth(context);
-        if (requiredCapabilities === anyAuth) {
-            context.params.authenticated = true;
-            return context;
-        }
-        if ((options?.adminPass || []).includes(context.method) && (_get(context.params, 'admin_pass') || _get(context.params, [configuration.core_path, 'admin_pass'])) as any) return context;
+export declare type PassConfig = {
+    loginConfig?:VerifyConfig
+}
+export const checkUcan = (requiredCapabilities: UcanCap, options?:UcanAuthOptions&PassConfig) => {
+    return async (context:HookContext):Promise<HookContext> => {
+        const configuration = options?.loginConfig || context.app.get('authentication') as AnyObj;
 
         let v: any = {ok: false, value: []};
 
@@ -201,7 +191,7 @@ export const ucanAuth = <S>(requiredCapabilities?: UcanCap, options?: UcanAuthOp
                                                 if (rlId === checkId) loginOk = true;
                                                 else rl++;
                                             }
-                                            if(!loginOk) i++
+                                            if (!loginOk) i++
                                         }
                                     } else if (checkArr.includes(String(recordLoginPassId))) {
                                         loginOk = true;
@@ -270,6 +260,29 @@ export const ucanAuth = <S>(requiredCapabilities?: UcanCap, options?: UcanAuthOp
                 }
             }
         }
+    }
+}
+
+export const ucanAuth = <S>(requiredCapabilities?: UcanCap, options?: UcanAuthOptions) => {
+    return async (context: HookContext<S>): Promise<HookContext<S>> => {
+        const configuration = context.app.get('authentication') as AnyObj;
+        const core_path = configuration.core_path || 'core';
+        const entity = configuration.entity || 'login';
+
+        const {_id: loginId} = _get(context.params, [core_path, entity]) || context.params?.login || {_id: undefined}
+        if (options?.log) console.log('ucan auth', 'loginId', loginId, 'core_path', core_path, 'entity', entity, 'core', context.params[core_path], 'params login', context.params.login, 'required capabilities', requiredCapabilities);
+        //Below for passing through auth with no required capabilities
+        if (requiredCapabilities === noThrow) return loginId ? context : await noThrowAuth(context);
+        if (!loginId) context = await bareAuth(context);
+        if (requiredCapabilities === anyAuth) {
+            context.params.authenticated = true;
+            return context;
+        }
+        if ((options?.adminPass || []).includes(context.method) && (_get(context.params, 'admin_pass') || _get(context.params, [configuration.core_path, 'admin_pass'])) as any) return context;
+
+        if(!requiredCapabilities) return context;
+        return await checkUcan(requiredCapabilities, options)(context)
+
     }
 }
 
