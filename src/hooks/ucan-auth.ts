@@ -184,14 +184,14 @@ export const checkUcan = (requiredCapabilities: UcanCap, options?:UcanAuthOption
                                     const checkArr = Array.isArray(loginCheckId) ? loginCheckId.map(a => String(a)) : [String(loginCheckId)];
                                     if (Array.isArray(recordLoginPassId)) {
                                         //loop through to see if there is a match present use for loops for performance instead of some
-                                        for (let i = 0; i < checkArr.length;) {
+                                        for (let i = 0; i < checkArr.length; i++) {
                                             const checkId = String(checkArr[i])
                                             for (let rl = 0; rl < recordLoginPassId.length;) {
                                                 const rlId = String(recordLoginPassId[rl]);
                                                 if (rlId === checkId) loginOk = true;
                                                 else rl++;
                                             }
-                                            if (!loginOk) i++
+                                            if (loginOk) break;
                                         }
                                     } else if (checkArr.includes(String(recordLoginPassId))) {
                                         loginOk = true;
