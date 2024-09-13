@@ -27,7 +27,7 @@ export class UcanStrategy extends AuthenticationBaseStrategy {
         auth.verifyAccessToken = (accessToken: string) => {
             return {} as any;
         };
-        super.authentication = auth;
+        super.setAuthentication(auth);
     }
 
     get configuration() {
