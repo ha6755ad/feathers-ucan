@@ -272,7 +272,7 @@ export const ucanAuth = <S>(requiredCapabilities?: UcanCap, options?: UcanAuthOp
         const {_id: loginId} = _get(context.params, [core_path, entity]) || context.params?.login || {_id: undefined}
         if (options?.log) console.log('ucan auth', 'loginId', loginId, 'core_path', core_path, 'entity', entity, 'core', context.params[core_path], 'params login', context.params.login, 'required capabilities', requiredCapabilities);
         //Below for passing through auth with no required capabilities
-        if (requiredCapabilities === noThrow) return loginId ? context : await noThrowAuth(context);
+        if (requiredCapabilities === noThrow || (requiredCapabilities && requiredCapabilities[context.method] === noThrow)) return loginId ? context : await noThrowAuth(context);
         if (!loginId) context = await bareAuth(context);
         if (requiredCapabilities === anyAuth) {
             context.params.authenticated = true;
