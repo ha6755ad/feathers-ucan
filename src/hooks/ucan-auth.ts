@@ -57,11 +57,17 @@ type VerifyRes = { ok: boolean, value?: Array<any>, err?: Array<any> };
 export const noThrowAuth = async <S>(context: HookContext<S>): Promise<HookContext<S>> => {
     const config = context.app.get('authentication') as AuthConfig;
     const entity = _get(context, ['auth', config.entity]);
-    if (entity) context = _set(context, [config.core_path, config.entity], entity)
-    context = await authenticate('jwt')(context as any)
-        .catch(() => {
-            return context;
-        })
+    if (entity) {
+        context = _set(context, [config.core_path, config.entity], entity)
+    }
+    try {
+        context = await authenticate('jwt')(context as any)
+            .catch(() => {
+                return context;
+            })
+    } catch(e) {
+        return context;
+    }
     return context;
 }
 
