@@ -259,13 +259,15 @@ export const checkUcan = (requiredCapabilities: UcanCap, options?:UcanAuthOption
                 context.params.authenticated = true;
                 return context;
             } else {
+                if(options?.log) console.log('checking special change', options?.specialChange);
                 if(options?.specialChange){
                     if(options.specialChange === anyAuth) return context;
                     else if(Array.isArray(options.specialChange)) {
                         if (['create', 'patch', 'update'].includes(context.method)) {
+                            if(Array.isArray(context.data)) throw new Error('No multi data allowed with special change')
                             for (const k in context.data || {}) {
                                 if (['$set', '$unset', '$addToSet', '$pull', '$push'].includes(k)) {
-                                    for (const sk in context.data[k]) {
+                                    for (const sk in context.data[k] || {}) {
                                         if (!options.specialChange.includes(sk)) {
                                             const spl = sk.split('.');
                                             if (spl.length === 1) delete context.data[k][sk];
@@ -299,15 +301,16 @@ export const ucanAuth = <S>(requiredCapabilities?: UcanCap, options?: UcanAuthOp
         if (options?.log) console.log('ucan auth', 'loginId', loginId, 'core_path', core_path, 'entity', entity, 'core', context.params[core_path], 'params login', context.params.login, 'required capabilities', requiredCapabilities);
         //Below for passing through auth with no required capabilities
         if (requiredCapabilities === noThrow || (requiredCapabilities && requiredCapabilities[context.method] === noThrow)) return loginId ? context : await noThrowAuth(context);
-        const adminPass = (options?.adminPass || []).includes(context.method)
-        if (!loginId) context = adminPass || options?.specialChange ? await noThrowAuth(context) : await bareAuth(context);
+        const adminPass = (options?.adminPass || []).includes(context.method) && (_get(context.params, 'admin_pass') || _get(context.params, [configuration.core_path, 'admin_pass'])) as any
+        if (!loginId) context = (adminPass || options?.specialChange) ? await noThrowAuth(context) : await bareAuth(context);
         if (requiredCapabilities === anyAuth && !options?.specialChange) {
             context.params.authenticated = !!context.params[entity];
             return context;
         }
-        if (adminPass && (_get(context.params, 'admin_pass') || _get(context.params, [configuration.core_path, 'admin_pass'])) as any) return context;
+        if (adminPass) return context;
 
         if(!requiredCapabilities) return context;
+        if(options?.log) console.log('checking ucan');
         return await checkUcan(requiredCapabilities, options)(context)
     }
 }
