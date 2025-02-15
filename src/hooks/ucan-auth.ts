@@ -261,19 +261,21 @@ export const checkUcan = (requiredCapabilities: UcanCap, options?:UcanAuthOption
             } else {
                 if(options?.specialChange){
                     if(options.specialChange === anyAuth) return context;
-                    if(['create', 'patch', 'update'].includes(context.method)){
-                        for(const k of context.data){
-                            if(['$set', '$unset', '$addToSet', '$pull', '$push'].includes(k)){
-                                for(const sk of context.data[k]){
-                                    if(!options.specialChange.includes(sk)){
-                                        const spl = sk.split('.');
-                                        if(spl.length === 1) delete context.data[k][sk];
-                                        else if(!options.specialChange.includes(spl[0])) delete context.data[k][sk]
+                    else if(Array.isArray(options.specialChange)) {
+                        if (['create', 'patch', 'update'].includes(context.method)) {
+                            for (const k in context.data || {}) {
+                                if (['$set', '$unset', '$addToSet', '$pull', '$push'].includes(k)) {
+                                    for (const sk in context.data[k]) {
+                                        if (!options.specialChange.includes(sk)) {
+                                            const spl = sk.split('.');
+                                            if (spl.length === 1) delete context.data[k][sk];
+                                            else if (!options.specialChange.includes(spl[0])) delete context.data[k][sk]
+                                        }
                                     }
-                                }
-                            } else if(!options.specialChange.includes(k)) delete context.data[k];
+                                } else if (!options.specialChange.includes(k)) delete context.data[k];
+                            }
+                            return context;
                         }
-                        return context;
                     }
                 }
                 console.error('Ucan capabilities requirements not met: ', v, context.type, context.path);
