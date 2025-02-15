@@ -124,8 +124,8 @@ export type CapabilityModelConfig = {
 export const modelCapabilities = (reqs: Array<CapabilityParts>, config: CapabilityModelConfig): Array<RequiredCapability> => {
 
     const rootIssuer = encodeKeyPair({secretKey: config.secret}).did();
-
-    return (reqs || []).map(a => {
+    if(!Array.isArray(reqs)) return []
+    return reqs.map(a => {
         return {
             capability: Array.isArray(a) ? genCapability({
                 with: {scheme: config.defaultScheme, hierPart: config.defaultHierPart},
@@ -149,7 +149,9 @@ export const checkUcan = (requiredCapabilities: UcanCap, options?:UcanAuthOption
 
         if (reqs.length) {
             v = await verifyAgainstReqs(reqs, configuration as VerifyConfig, options)(context)
-        } else v.ok = true;
+
+            /** if the anyAuth setting is used along with specialChange, a user could get through to this point despite not being authenticated, so this step does not allow a pass for anyAuth setting even though no requiredCapabilities are present - because it was intended to throw if not authenticated unless special change conditions are met */
+        } else if(requiredCapabilities !== '*') v.ok = true;
         if (v?.ok) {
             context.params.authenticated = true;
             return context
@@ -301,18 +303,14 @@ export const ucanAuth = <S>(requiredCapabilities?: UcanCap, options?: UcanAuthOp
         if (options?.log) console.log('ucan auth', 'loginId', loginId, 'core_path', core_path, 'entity', entity, 'core', context.params[core_path], 'params login', context.params.login, 'required capabilities', requiredCapabilities);
         //Below for passing through auth with no required capabilities
         if (requiredCapabilities === noThrow || (requiredCapabilities && requiredCapabilities[context.method] === noThrow)) return loginId ? context : await noThrowAuth(context);
-        if(options?.log) console.log('not no throw');
         const adminPass = (options?.adminPass || []).includes(context.method) && (_get(context.params, 'admin_pass') || _get(context.params, [configuration.core_path, 'admin_pass'])) as any
-        if(options?.log) console.log('is adminPass?', adminPass, options?.specialChange);
         if (!loginId) context = (adminPass || options?.specialChange) ? await noThrowAuth(context) : await bareAuth(context);
-        if(options?.log) console.log('got loginId?', context.params[entity]);
         if (requiredCapabilities === anyAuth && !options?.specialChange) {
             context.params.authenticated = !!context.params[entity];
             return context;
         }
         if (adminPass) return context;
         if(!requiredCapabilities) return context;
-        if(options?.log) console.log('checking ucan');
         return await checkUcan(requiredCapabilities, options)(context)
     }
 }
