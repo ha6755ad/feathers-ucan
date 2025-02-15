@@ -34,7 +34,8 @@ export declare type UcanAuthOptions = {
     adminPass?: Array<string>,
     noThrow?: boolean,
     log?: boolean,
-    existingParams?: AnyObj
+    existingParams?: AnyObj,
+    specialChange?:Array<string>|AnyAuth
 }
 type RequiredCapability = { capability: Capability, rootIssuer: string }
 export type UcanCap = Array<CapabilityParts> | AnyAuth | NoThrow;
@@ -209,7 +210,7 @@ export const checkUcan = (requiredCapabilities: UcanCap, options?:UcanAuthOption
 
                         if (loginOk) {
                             v.ok = true
-                            //loginPass is true - but check for granular field permissions such as patch/owner,color,status that imply limited permission
+                            /**loginPass is true - but check for granular field permissions such as patch/owner,color,status that imply limited permission*/
                             //TODO: possibly a throw option here. If loginPass is ok, it will go forward, but could send an empty or modified patch object
                             if (!(lpass[1] === '*' || ['find', 'get', 'remove'].some(a => lpass[1].includes(a)))) {
                                 const currentMethod = allMethods ? '*' : lpass[1][methodIdx];
@@ -258,6 +259,23 @@ export const checkUcan = (requiredCapabilities: UcanCap, options?:UcanAuthOption
                 context.params.authenticated = true;
                 return context;
             } else {
+                if(options?.specialChange){
+                    if(options.specialChange === anyAuth) return context;
+                    if(['create', 'patch', 'update'].includes(context.method)){
+                        for(const k of context.data){
+                            if(['$set', '$unset', '$addToSet', '$pull', '$push'].includes(k)){
+                                for(const sk of context.data[k]){
+                                    if(!options.specialChange.includes(sk)){
+                                        const spl = sk.split('.');
+                                        if(spl.length === 1) delete context.data[k][sk];
+                                        else if(!options.specialChange.includes(spl[0])) delete context.data[k][sk]
+                                    }
+                                }
+                            } else if(!options.specialChange.includes(k)) delete context.data[k];
+                        }
+                        return context;
+                    }
+                }
                 console.error('Ucan capabilities requirements not met: ', v, context.type, context.path);
                 if (!options?.noThrow) throw new Error('Missing proper capabilities for this action: ' + context.type + ': ' + context.path + ' - ' + context.method);
                 else {
