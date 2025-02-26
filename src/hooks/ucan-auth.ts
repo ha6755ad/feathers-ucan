@@ -154,6 +154,7 @@ export const checkUcan = (requiredCapabilities: UcanCap, options?:UcanAuthOption
         } else if(requiredCapabilities !== '*') v.ok = true;
         if (v?.ok) {
             context.params.authenticated = true;
+            context.params.canU = true;
             return context
         } else {
             //If creator pass enabled, check to see if the auth login is the creator of the record
@@ -259,12 +260,15 @@ export const checkUcan = (requiredCapabilities: UcanCap, options?:UcanAuthOption
             }
             if (v.ok) {
                 context.params.authenticated = true;
+                context.params.canU = true;
                 return context;
             } else {
                 if(options?.log) console.log('checking special change', options?.specialChange);
                 if(options?.specialChange){
-                    if(options.specialChange === anyAuth) return context;
-                    else if(Array.isArray(options.specialChange)) {
+                    if(options.specialChange === anyAuth) {
+                        context.params.canU = true;
+                        return context;
+                    } else if(Array.isArray(options.specialChange)) {
                         if (['create', 'patch', 'update'].includes(context.method)) {
                             if(Array.isArray(context.data)) throw new Error('No multi data allowed with special change')
                             for (const k in context.data || {}) {
@@ -278,6 +282,7 @@ export const checkUcan = (requiredCapabilities: UcanCap, options?:UcanAuthOption
                                     }
                                 } else if (!options.specialChange.includes(k)) delete context.data[k];
                             }
+                            context.params.canU = true;
                             return context;
                         }
                     }
