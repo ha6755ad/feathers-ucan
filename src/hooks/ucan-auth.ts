@@ -119,7 +119,7 @@ export const verifyAgainstReqs = <S>(reqs: Array<RequiredCapability>, config: Ve
         const cs = (options?.cap_subjects || []).filter(a => !!a)
         if (cs) {
             const configuration = config?.loginConfig || context.app.get('authentication') as AnyObj;
-            const loginCheckId = _get(context.params, `${configuration.entity}._id`) as any;
+            const loginCheckId = String(_get(context.params, `${configuration.entity}._id` || '')) as any;
             const caps = await new CoreCall(configuration.capability_service || 'caps', context).find({
                 query: {
                     $limit: cs.length,
