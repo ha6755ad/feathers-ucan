@@ -103,6 +103,7 @@ export type VerifyConfig = {
 };
 export const verifyAgainstReqs = <S>(reqs: Array<RequiredCapability>, config: VerifyConfig, options?: UcanAuthOptions) => {
     return async (context: HookContext<S>): Promise<VerifyRes> => {
+        const log = options?.log
         const ucan = _get(context.params, config.client_ucan) as string;
         const audience = _get(context.params, config.ucan_aud) as string;
         let vMethod: (uc?:string) => Promise<VerifyRes>
@@ -115,7 +116,9 @@ export const verifyAgainstReqs = <S>(reqs: Array<RequiredCapability>, config: Ve
         }))
         else vMethod = (uc?:string) => verifyUcan(uc || ucan, {audience, requiredCapabilities: reqs}) as Promise<VerifyRes>
         let v = await vMethod()
+        if(log) console.log('verify against reqs', v);
         if (v.ok) return v;
+        if(log) console.log('check cap_subjects');
         const cs = (options?.cap_subjects || []).filter(a => !!a)
         if (cs) {
             const configuration = config?.loginConfig || context.app.get('authentication') as AnyObj;
