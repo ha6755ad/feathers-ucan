@@ -127,6 +127,7 @@ export const verifyAgainstReqs = <S>(reqs: Array<RequiredCapability>, config: Ve
                 }
             })
                 .catch(err => console.log(`Error finding caps in ucan auth: ${err.message}`))
+            if(options?.log) console.log('caps', caps);
             if (caps?.data) {
                 for (const cap of caps.data) {
                     for (const k in cap.caps || {}) {
@@ -139,6 +140,7 @@ export const verifyAgainstReqs = <S>(reqs: Array<RequiredCapability>, config: Ve
                             } catch (e:any) {
                                 console.log(`Error verifying ucan from cap: ${cap._id}. Err:${e.message}`)
                             }
+                            if(options?.log) console.log('tried v on cap', cap, v);
                             if(v.ok) return v;
                         }
                     }
