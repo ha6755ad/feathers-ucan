@@ -37,7 +37,7 @@ export declare type UcanAuthOptions = {
     log?: boolean,
     existingParams?: AnyObj,
     specialChange?: Array<string> | AnyAuth,
-    cap_subjects: Array<string>
+    cap_subjects?: Array<string>
 
 }
 type RequiredCapability = { capability: Capability, rootIssuer: string }
