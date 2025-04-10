@@ -134,11 +134,14 @@ export const verifyAgainstReqs = <S>(reqs: Array<RequiredCapability>, config: Ve
             if (caps?.data) {
                 for (const cap of caps.data) {
                     for (const k in cap.caps || {}) {
+                        if(log) console.log('check cap', k, cap, loginCheckId);
                         if ((cap.caps[k].logins || []).includes(loginCheckId)) {
                             try {
                                 const ucanString = ucanToken(cap.caps[k].ucan)
+                                if(log) console.log('got ucan string', ucanString);
                                 if (ucanString) {
                                     v = await vMethod(ucanString)
+                                    if(log) console.log('tried v on cap', v);
                                 }
                             } catch (e:any) {
                                 console.log(`Error verifying ucan from cap: ${cap._id}. Err:${e.message}`)
