@@ -31,7 +31,7 @@ export declare type LoginPassOption = [Array<string>, Array<string> | '*']
 export declare type UcanAuthOptions = {
     creatorPass?: '*' | Array<string>,
     loginPass?: Array<LoginPassOption>,
-    or?: Array<string>
+    or?: '*' | Array<string>
     adminPass?: Array<string>,
     noThrow?: boolean,
     log?: boolean,
@@ -107,7 +107,8 @@ export const verifyAgainstReqs = <S>(reqs: Array<RequiredCapability>, config: Ve
         const ucan = _get(context.params, config.client_ucan) as string;
         const audience = _get(context.params, config.ucan_aud) as string;
         let vMethod: (uc?:string) => Promise<VerifyRes>
-        if(ucan && options?.or?.includes(context.method)) vMethod = (uc?:string) => orVerifyLoop((reqs || []).map(a => {
+        const or = options?.or || []
+        if(ucan && (or === '*' || or.includes(context.method))) vMethod = (uc?:string) => orVerifyLoop((reqs || []).map(a => {
             return {
                 ucan: uc || ucan,
                 audience,
@@ -134,7 +135,7 @@ export const verifyAgainstReqs = <S>(reqs: Array<RequiredCapability>, config: Ve
             if (caps?.data) {
                 for (const cap of caps.data) {
                     for (const k in cap.caps || {}) {
-                        if(log) console.log('check cap', k, cap, loginCheckId);
+                        if(log) console.log('check cap', k, cap.caps[k].logins, loginCheckId);
                         if ((cap.caps[k].logins || []).map((a:any) => String(a)).includes(loginCheckId)) {
                             try {
                                 const ucanString = ucanToken(cap.caps[k].ucan)
@@ -146,7 +147,7 @@ export const verifyAgainstReqs = <S>(reqs: Array<RequiredCapability>, config: Ve
                             } catch (e:any) {
                                 console.log(`Error verifying ucan from cap: ${cap._id}. Err:${e.message}`)
                             }
-                            if(options?.log) console.log('tried v on cap', cap, v);
+                            if(options?.log) console.log('tried v on cap',v);
                             if(v.ok) return v;
                         }
                     }
