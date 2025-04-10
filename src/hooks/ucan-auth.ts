@@ -119,14 +119,14 @@ export const verifyAgainstReqs = <S>(reqs: Array<RequiredCapability>, config: Ve
         if(log) console.log('verify against reqs', v);
         if (v.ok) return v;
         const cs = (options?.cap_subjects || []).filter(a => !!a)
-        if(log) console.log('check cap_subjects', options?.cap_subjects);
+        if(log) console.log('check cap_subjects', cs);
         if (cs) {
             const configuration = config?.loginConfig || context.app.get('authentication') as AnyObj;
             const loginCheckId = String(_get(context.params, `${configuration.entity}._id` || '')) as any;
             const caps = await new CoreCall(configuration.capability_service || 'caps', context).find({
                 query: {
                     $limit: cs.length,
-                    _id: {$in: cs}
+                    subject: {$in: cs}
                 }
             })
                 .catch(err => console.log(`Error finding caps in ucan auth: ${err.message}`))
