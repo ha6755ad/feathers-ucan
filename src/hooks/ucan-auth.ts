@@ -7,6 +7,8 @@ import {
     encodeKeyPair,
     genCapability,
     parseUcan,
+    SUPERUSER,
+    Ucan,
     ucanToken,
     VerifyOptions,
     verifyUcan
@@ -92,11 +94,35 @@ export const bareAuth = async <S>(context: HookContext<S>): Promise<HookContext<
     return authenticate('jwt')(context as any);
 }
 
+const verifyOne = async (ucan: string, options: VerifyOptions) => {
+    let useUcan = ucan;
+    try {
+        /** Parse the ucan and see if anny att with a matching namespace in the required capabilities has a SUPERUSER in the segements. If so, transform the entire can to SUPERUSER - UCAN will not accept SUPERUSER in the segments as a pass even if the namespace matches it doesn't recognize SUPERUSER as an individual segment concept */
+        const parsed = parseUcan(ucan);
+        let modified = false;
+        let hasWildcard:any = [];
+        for (let i = 0; i < parsed.payload.att.length; i++) {
+            const att = parsed.payload.att[i];
+            if (att.can !== SUPERUSER && att.can.segments?.includes(SUPERUSER)){
+                for(const req of options.requiredCapabilities || []) {
+                    const reqCan = req.capability.can;
+                    if (reqCan !== SUPERUSER && att.can.namespace === reqCan.namespace) {
+                        modified = true;
+                       parsed.payload.att[i].can = SUPERUSER
+                    }
+                }
+            }
+        }
+        if(modified) useUcan = ucanToken(parsed as Ucan)
+
+    } catch (e:any) {
+        console.error(`Error parsing ucan in verify ucan stage: ${e.message}`)
+    }
+    return await verifyUcan(useUcan, options);
+};
 export const orVerifyLoop = async (arr: Array<VerifyOne>, log?: boolean): Promise<VerifyRes> => {
     let v: any = {ok: false, value: []};
-    const verifyOne = async (ucan: string, options: VerifyOptions) => {
-        return await verifyUcan(ucan, options);
-    };
+
     for (const i in arr) {
         if(log) console.log('or verify loop', arr[i], parseUcan(arr[i].ucan));
         if (!v?.ok) {

@@ -85,7 +85,18 @@ Also worth noting is that we expose a `CoreCall` class that allows you to make f
 
 ### using allUcanAuth
 **************methods**************: is an object that includes optional keys for all feathers service methods and the value is an array with 3 possible values:
-`Array<CapabilityParts>`where `CapabilityParts` is the `Partial<Capability>` from the **********************genCapability********************** method, or a simplified `Array<[string, string]>` where the 2 elements of the array are the ucan Capability `namespace` and `segments` sequentially
+`Array<CapabilityParts>`where `CapabilityParts` is the `Partial<Capability>` from the **********************genCapability********************** method, or a simplified `Array<[string, string]>` where the 2 elements of the array are the ucan Capability `namespace` and `segments` sequentially. 
+
+There is one major modification to how UCAN works that makes it easier to utilize this in a database setting. UCAN allows for a `SUPERUSER` wildcard on the `can` of an att/requiredCapability to pass all as long as the `with` elements match. See the Ability type (can) below:
+
+```
+export declare type Ability = Superuser | {
+    namespace: string;
+    segments: string[];
+};
+```
+
+However, if you want to allow a `SUPERUSER` for a given namespace, there is no allowance for this. Because of this, we have modified this implementation so that if your segments array includes a `SUPERUSER`, and we find a matching required capability `with` and `can.namespace` - we will transform the ucan att at that index to a `SUPERUSER`. 
 
 In practice, here’s what methods look like (of course the mix of settings is nonsensical in normal use) that you can pass to the ********************allUcanAuth******************** function along with example capability configurations.
 
