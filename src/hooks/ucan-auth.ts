@@ -125,7 +125,7 @@ export const verifyAgainstReqs = <S>(reqs: Array<RequiredCapability>, config: Ve
                 audience,
                 requiredCapabilities: [a]
             }
-        }))
+        }), log)
         else vMethod = (uc?:string) => verifyUcan(uc || ucan, {audience, requiredCapabilities: reqs}) as Promise<VerifyRes>
         let v = await vMethod()
         if(log) console.log('verify against reqs', v);
