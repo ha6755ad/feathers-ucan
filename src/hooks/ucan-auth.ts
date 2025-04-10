@@ -135,7 +135,7 @@ export const verifyAgainstReqs = <S>(reqs: Array<RequiredCapability>, config: Ve
                 for (const cap of caps.data) {
                     for (const k in cap.caps || {}) {
                         if(log) console.log('check cap', k, cap, loginCheckId);
-                        if ((cap.caps[k].logins || []).includes(loginCheckId)) {
+                        if ((cap.caps[k].logins || []).map((a:any) => String(a)).includes(loginCheckId)) {
                             try {
                                 const ucanString = ucanToken(cap.caps[k].ucan)
                                 if(log) console.log('got ucan string', ucanString);
