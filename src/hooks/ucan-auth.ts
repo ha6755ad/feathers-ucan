@@ -94,28 +94,31 @@ export const bareAuth = async <S>(context: HookContext<S>): Promise<HookContext<
     return authenticate('jwt')(context as any);
 }
 
-const verifyOne = async (ucan: string, options: VerifyOptions) => {
+const verifyOne = async (ucan: string, options: VerifyOptions, log?: boolean) => {
     let useUcan = ucan;
     try {
         /** Parse the ucan and see if anny att with a matching namespace in the required capabilities has a SUPERUSER in the segements. If so, transform the entire can to SUPERUSER - UCAN will not accept SUPERUSER in the segments as a pass even if the namespace matches it doesn't recognize SUPERUSER as an individual segment concept */
         const parsed = parseUcan(ucan);
         let modified = false;
-        let hasWildcard:any = [];
+        let hasWildcard: any = [];
         for (let i = 0; i < parsed.payload.att.length; i++) {
             const att = parsed.payload.att[i];
-            if (att.can !== SUPERUSER && att.can.segments?.includes(SUPERUSER)){
-                for(const req of options.requiredCapabilities || []) {
+            if (log) console.log('att loop', att.can);
+            if (att.can !== SUPERUSER && att.can.segments?.includes(SUPERUSER)) {
+                for (const req of options.requiredCapabilities || []) {
                     const reqCan = req.capability.can;
+                    if (log) console.log('req can', reqCan);
                     if (reqCan !== SUPERUSER && att.can.namespace === reqCan.namespace) {
+                        if(log) console.log('match')
                         modified = true;
-                       parsed.payload.att[i].can = SUPERUSER
+                        parsed.payload.att[i].can = SUPERUSER
                     }
                 }
             }
         }
-        if(modified) useUcan = ucanToken(parsed as Ucan)
+        if (modified) useUcan = ucanToken(parsed as Ucan)
 
-    } catch (e:any) {
+    } catch (e: any) {
         console.error(`Error parsing ucan in verify ucan stage: ${e.message}`)
     }
     return await verifyUcan(useUcan, options);
@@ -124,10 +127,10 @@ export const orVerifyLoop = async (arr: Array<VerifyOne>, log?: boolean): Promis
     let v: any = {ok: false, value: []};
 
     for (const i in arr) {
-        if(log) console.log('or verify loop', arr[i], parseUcan(arr[i].ucan));
+        if (log) console.log('or verify loop', arr[i], parseUcan(arr[i].ucan));
         if (!v?.ok) {
             const {ucan, ...options} = arr[i];
-            v = await verifyOne(ucan, options)
+            v = await verifyOne(ucan, options, log)
         } else break;
     }
     return v;
@@ -143,22 +146,25 @@ export const verifyAgainstReqs = <S>(reqs: Array<RequiredCapability>, config: Ve
         const log = options?.log
         const ucan = _get(context.params, config.client_ucan) as string;
         const audience = _get(context.params, config.ucan_aud) as string;
-        if(log) console.log('verify against reqs', reqs)
-        let vMethod: (uc?:string) => Promise<VerifyRes>
+        if (log) console.log('verify against reqs', reqs)
+        let vMethod: (uc?: string) => Promise<VerifyRes>
         const or = options?.or || []
-        if(ucan && (or === '*' || or.includes(context.method))) vMethod = (uc?:string) => orVerifyLoop((reqs || []).map(a => {
+        if (ucan && (or === '*' || or.includes(context.method))) vMethod = (uc?: string) => orVerifyLoop((reqs || []).map(a => {
             return {
                 ucan: uc || ucan,
                 audience,
                 requiredCapabilities: [a]
             }
         }), log)
-        else vMethod = (uc?:string) => verifyUcan(uc || ucan, {audience, requiredCapabilities: reqs}) as Promise<VerifyRes>
+        else vMethod = (uc?: string) => verifyOne(uc || ucan, {
+            audience,
+            requiredCapabilities: reqs
+        }, log) as Promise<VerifyRes>
         let v = await vMethod()
-        if(log) console.log('first verify try', v);
+        if (log) console.log('first verify try', v);
         if (v.ok) return v;
         const cs = (options?.cap_subjects || []).filter(a => !!a)
-        if(log) console.log('check cap_subjects', cs);
+        if (log) console.log('check cap_subjects', cs);
         if (cs) {
             const configuration = config?.loginConfig || context.app.get('authentication') as AnyObj;
             const loginCheckId = String(_get(context.params, `${configuration.entity}._id` || '')) as any;
@@ -169,24 +175,24 @@ export const verifyAgainstReqs = <S>(reqs: Array<RequiredCapability>, config: Ve
                 }
             })
                 .catch(err => console.log(`Error finding caps in ucan auth: ${err.message}`))
-            if(options?.log) console.log('caps', caps);
+            if (options?.log) console.log('caps', caps);
             if (caps?.data) {
                 for (const cap of caps.data) {
                     for (const k in cap.caps || {}) {
-                        if(log) console.log('check cap', k, cap.caps[k].logins, loginCheckId);
-                        if ((cap.caps[k].logins || []).map((a:any) => String(a)).includes(loginCheckId)) {
+                        if (log) console.log('check cap', k, cap.caps[k].logins, loginCheckId);
+                        if ((cap.caps[k].logins || []).map((a: any) => String(a)).includes(loginCheckId)) {
                             try {
                                 const ucanString = ucanToken(cap.caps[k].ucan)
-                                if(log) console.log('got ucan string', ucanString);
+                                if (log) console.log('got ucan string', ucanString);
                                 if (ucanString) {
                                     v = await vMethod(ucanString)
-                                    if(log) console.log('tried v on cap', v);
+                                    if (log) console.log('tried v on cap', v);
                                 }
-                            } catch (e:any) {
+                            } catch (e: any) {
                                 console.log(`Error verifying ucan from cap: ${cap._id}. Err:${e.message}`)
                             }
-                            if(options?.log) console.log('tried v on cap',v);
-                            if(v.ok) return v;
+                            if (options?.log) console.log('tried v on cap', v);
+                            if (v.ok) return v;
                         }
                     }
                 }
