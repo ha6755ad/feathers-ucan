@@ -97,11 +97,13 @@ export const bareAuth = async <S>(context: HookContext<S>): Promise<HookContext<
 const verifyOne = async (ucan: string, options: VerifyOptions, log?: boolean) => {
     let v = await verifyUcan(ucan, options);
     if (!v?.ok && options.requiredCapabilities) {
+        const newCapabilities = options.requiredCapabilities.map(a => {
+            if (a.capability.can !== SUPERUSER) a.capability.can.segments = ['*']
+            return a
+        })
+        if(log) console.log('set new req capabilities', newCapabilities, parseUcan(ucan))
         v = await verifyUcan(ucan, {
-            ...options, requiredCapabilities: options.requiredCapabilities.map(a => {
-                if (a.capability.can !== SUPERUSER) a.capability.can.segments = ['*']
-                return a
-            })
+            ...options, requiredCapabilities: newCapabilities
         })
         if (log) console.log('Second verification result:', v);
     }
