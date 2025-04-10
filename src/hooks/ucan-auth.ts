@@ -7,7 +7,6 @@ import {
     encodeKeyPair,
     genCapability,
     parseUcan,
-    SUPERUSER,
     Ucan,
     ucanToken,
     VerifyOptions,
@@ -15,6 +14,8 @@ import {
 } from 'symbol-ucan';
 import {loadExists, setExists} from '../utils';
 import {CoreCall} from '../core';
+
+const SUPERUSER = '*'
 
 export type UcanAuthConfig = {
     entity: string,
@@ -111,12 +112,15 @@ const verifyOne = async (ucan: string, options: VerifyOptions, log?: boolean) =>
                     if (reqCan !== SUPERUSER && att.can.namespace === reqCan.namespace) {
                         if(log) console.log('match')
                         modified = true;
-                        parsed.payload.att[i].can = SUPERUSER
+                        parsed.payload.att[i].can = { ...reqCan };
                     }
                 }
             }
         }
-        if (modified) useUcan = ucanToken(parsed as Ucan)
+        if (modified) {
+            if(log) console.log('modified ucan', parsed);
+            useUcan = ucanToken(parsed as Ucan)
+        }
 
     } catch (e: any) {
         console.error(`Error parsing ucan in verify ucan stage: ${e.message}`)
