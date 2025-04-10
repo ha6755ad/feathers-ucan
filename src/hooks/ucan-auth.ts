@@ -117,6 +117,7 @@ export const verifyAgainstReqs = <S>(reqs: Array<RequiredCapability>, config: Ve
         const log = options?.log
         const ucan = _get(context.params, config.client_ucan) as string;
         const audience = _get(context.params, config.ucan_aud) as string;
+        if(log) console.log('verify against reqs', reqs)
         let vMethod: (uc?:string) => Promise<VerifyRes>
         const or = options?.or || []
         if(ucan && (or === '*' || or.includes(context.method))) vMethod = (uc?:string) => orVerifyLoop((reqs || []).map(a => {
@@ -128,7 +129,7 @@ export const verifyAgainstReqs = <S>(reqs: Array<RequiredCapability>, config: Ve
         }), log)
         else vMethod = (uc?:string) => verifyUcan(uc || ucan, {audience, requiredCapabilities: reqs}) as Promise<VerifyRes>
         let v = await vMethod()
-        if(log) console.log('verify against reqs', v);
+        if(log) console.log('first verify try', v);
         if (v.ok) return v;
         const cs = (options?.cap_subjects || []).filter(a => !!a)
         if(log) console.log('check cap_subjects', cs);
