@@ -1,6 +1,16 @@
 import {AnyObj, HookContext} from '../types';
 import {authenticate} from '@feathersjs/authentication';
-import {_get, _set, Capability, encodeKeyPair, genCapability, ucanToken, VerifyOptions, verifyUcan} from 'symbol-ucan';
+import {
+    _get,
+    _set,
+    Capability,
+    encodeKeyPair,
+    genCapability,
+    parseUcan,
+    ucanToken,
+    VerifyOptions,
+    verifyUcan
+} from 'symbol-ucan';
 import {loadExists, setExists} from '../utils';
 import {CoreCall} from '../core';
 
@@ -82,12 +92,13 @@ export const bareAuth = async <S>(context: HookContext<S>): Promise<HookContext<
     return authenticate('jwt')(context as any);
 }
 
-export const orVerifyLoop = async (arr: Array<VerifyOne>): Promise<VerifyRes> => {
+export const orVerifyLoop = async (arr: Array<VerifyOne>, log?: boolean): Promise<VerifyRes> => {
     let v: any = {ok: false, value: []};
     const verifyOne = async (ucan: string, options: VerifyOptions) => {
         return await verifyUcan(ucan, options);
     };
     for (const i in arr) {
+        if(log) console.log('or verify loop', arr[i], parseUcan(arr[i].ucan));
         if (!v?.ok) {
             const {ucan, ...options} = arr[i];
             v = await verifyOne(ucan, options)
