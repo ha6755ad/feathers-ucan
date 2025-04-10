@@ -113,6 +113,7 @@ const verifyOne = async (ucan: string, options: VerifyOptions, log?: boolean) =>
                         if(log) console.log('match')
                         modified = true;
                         parsed.payload.att[i].can = { ...reqCan };
+                        break;
                     }
                 }
             }
@@ -125,6 +126,7 @@ const verifyOne = async (ucan: string, options: VerifyOptions, log?: boolean) =>
     } catch (e: any) {
         console.error(`Error parsing ucan in verify ucan stage: ${e.message}`)
     }
+    if(log) console.log('verifying ucan one time', useUcan === ucan, useUcan);
     return await verifyUcan(useUcan, options);
 };
 export const orVerifyLoop = async (arr: Array<VerifyOne>, log?: boolean): Promise<VerifyRes> => {
@@ -135,6 +137,7 @@ export const orVerifyLoop = async (arr: Array<VerifyOne>, log?: boolean): Promis
         if (!v?.ok) {
             const {ucan, ...options} = arr[i];
             v = await verifyOne(ucan, options, log)
+            if(log) console.log('got in verify loop', v);
         } else break;
     }
     return v;
