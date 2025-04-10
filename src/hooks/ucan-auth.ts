@@ -301,19 +301,19 @@ export const checkUcan = (requiredCapabilities: UcanCap, options?: UcanAuthOptio
                 }
                 if (scrubData) context = _set(context, 'data', scrubbedData);
             }
-            if (!v?.ok) {
-                let hasSplitNamespace = false;
-                const reducedReqs: Array<RequiredCapability> = [];
-                reqs.forEach((req, i) => {
-                    const splt = (_get<RequiredCapability, string>(req, 'capability.can.namespace') || '').split(':')
-                    if (splt[1]) {
-                        req = _set(req, 'capability.can.namespace', splt[0]);
-                        hasSplitNamespace = true;
-                    }
-                    reducedReqs.push(req)
-                })
-                if (hasSplitNamespace) v = await verifyAgainstReqs(reqs, configuration as VerifyConfig, options)(context);
-            }
+            // if (!v?.ok) {
+            //     let hasSplitNamespace = false;
+            //     const reducedReqs: Array<RequiredCapability> = [];
+            //     reqs.forEach((req, i) => {
+            //         const splt = (_get<RequiredCapability, string>(req, 'capability.can.namespace') || '').split(':')
+            //         if (splt[1]) {
+            //             req = _set(req, 'capability.can.namespace', splt[0]);
+            //             hasSplitNamespace = true;
+            //         }
+            //         reducedReqs.push(req)
+            //     })
+            //     if (hasSplitNamespace) v = await verifyAgainstReqs(reqs, configuration as VerifyConfig, options)(context);
+            // }
             if (v.ok) {
                 context.params.authenticated = true;
                 context.params.canU = true;
