@@ -7,7 +7,6 @@ import {
     encodeKeyPair,
     genCapability,
     parseUcan,
-    Ucan,
     ucanToken,
     VerifyOptions,
     verifyUcan
@@ -96,38 +95,17 @@ export const bareAuth = async <S>(context: HookContext<S>): Promise<HookContext<
 }
 
 const verifyOne = async (ucan: string, options: VerifyOptions, log?: boolean) => {
-    let useUcan = ucan;
-    try {
-        /** Parse the ucan and see if anny att with a matching namespace in the required capabilities has a SUPERUSER in the segements. If so, transform the entire can to SUPERUSER - UCAN will not accept SUPERUSER in the segments as a pass even if the namespace matches it doesn't recognize SUPERUSER as an individual segment concept */
-        const parsed = parseUcan(ucan);
-        let modified = false;
-        let hasWildcard: any = [];
-        for (let i = 0; i < parsed.payload.att.length; i++) {
-            const att = parsed.payload.att[i];
-            if (log) console.log('att loop', att.can);
-            if (att.can !== SUPERUSER && att.can.segments?.includes(SUPERUSER)) {
-                for (const req of options.requiredCapabilities || []) {
-                    const reqCan = req.capability.can;
-                    if (log) console.log('req can', reqCan);
-                    if (reqCan !== SUPERUSER && att.can.namespace === reqCan.namespace) {
-                        if(log) console.log('match')
-                        modified = true;
-                        parsed.payload.att[i].can = { ...reqCan };
-                        break;
-                    }
-                }
-            }
-        }
-        if (modified) {
-            if(log) console.log('modified ucan', parsed);
-            useUcan = ucanToken(parsed as Ucan)
-        }
-
-    } catch (e: any) {
-        console.error(`Error parsing ucan in verify ucan stage: ${e.message}`)
+    let v = await verifyUcan(ucan, options);
+    if (!v?.ok && options.requiredCapabilities) {
+        v = await verifyUcan(ucan, {
+            ...options, requiredCapabilities: options.requiredCapabilities.map(a => {
+                if (a.capability.can !== SUPERUSER) a.capability.can.segments = ['*']
+                return a
+            })
+        })
+        if (log) console.log('Second verification result:', v);
     }
-    if(log) console.log('verifying ucan one time', useUcan === ucan, useUcan);
-    return await verifyUcan(useUcan, options);
+    return v;
 };
 export const orVerifyLoop = async (arr: Array<VerifyOne>, log?: boolean): Promise<VerifyRes> => {
     let v: any = {ok: false, value: []};
@@ -137,7 +115,7 @@ export const orVerifyLoop = async (arr: Array<VerifyOne>, log?: boolean): Promis
         if (!v?.ok) {
             const {ucan, ...options} = arr[i];
             v = await verifyOne(ucan, options, log)
-            if(log) console.log('got in verify loop', v);
+            if (log) console.log('got in verify loop', v);
         } else break;
     }
     return v;
