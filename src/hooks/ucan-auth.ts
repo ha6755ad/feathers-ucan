@@ -95,32 +95,40 @@ export const bareAuth = async <S>(context: HookContext<S>): Promise<HookContext<
 }
 
 const verifyOne = async (ucan: string, options: VerifyOptions, log?: boolean) => {
-    let v = await verifyUcan(ucan, options);
-    if (!v?.ok && options.requiredCapabilities) {
-        const newCapabilities = options.requiredCapabilities.map(a => {
-            if (a.capability.can !== SUPERUSER) a.capability.can.segments = ['*']
-            return a
-        })
-        if(log) console.log('set new req capabilities', newCapabilities, parseUcan(ucan))
-        v = await verifyUcan(ucan, {
-            ...options, requiredCapabilities: newCapabilities
-        })
-        if (log) console.log('Second verification result:', v);
+    try {
+        let v = await verifyUcan(ucan, options);
+        if (!v?.ok && options.requiredCapabilities) {
+            const newCapabilities = options.requiredCapabilities.map(a => {
+                if (a.capability.can !== SUPERUSER) a.capability.can.segments = ['*']
+                return a
+            })
+            if (log) console.log('set new req capabilities', newCapabilities, parseUcan(ucan))
+            v = await verifyUcan(ucan, {
+                ...options, requiredCapabilities: newCapabilities
+            })
+            if (log) console.log('Second verification result:', v);
+        }
+        return v;
+    } catch(e:any){
+        return { ok: false, err: [e.message] }
     }
-    return v;
 };
 export const orVerifyLoop = async (arr: Array<VerifyOne>, log?: boolean): Promise<VerifyRes> => {
     let v: any = {ok: false, value: []};
 
-    for (const i in arr) {
-        if (log) console.log('or verify loop', arr[i], parseUcan(arr[i].ucan));
-        if (!v?.ok) {
-            const {ucan, ...options} = arr[i];
-            v = await verifyOne(ucan, options, log)
-            if (log) console.log('got in verify loop', v);
-        } else break;
+    try {
+        for (const i in arr) {
+            if (log) console.log('or verify loop', arr[i], parseUcan(arr[i].ucan));
+            if (!v?.ok) {
+                const {ucan, ...options} = arr[i];
+                v = await verifyOne(ucan, options, log)
+                if (log) console.log('got in verify loop', v);
+            } else break;
+        }
+        return v;
+    } catch (e:any) {
+        return {ok: false, err: [e.message]}
     }
-    return v;
 }
 
 export type VerifyConfig = {
@@ -149,7 +157,7 @@ export const verifyAgainstReqs = <S>(reqs: Array<RequiredCapability>, config: Ve
         }, log) as Promise<VerifyRes>
         let v = await vMethod()
         if (log) console.log('first verify try', v);
-        if (v.ok) return v;
+        if (v?.ok) return v;
         const cs = (options?.cap_subjects || []).filter(a => !!a)
         if (log) console.log('check cap_subjects', cs);
         if (cs) {
@@ -162,7 +170,7 @@ export const verifyAgainstReqs = <S>(reqs: Array<RequiredCapability>, config: Ve
                 }
             })
                 .catch(err => console.log(`Error finding caps in ucan auth: ${err.message}`))
-            if (options?.log) console.log('caps', caps);
+            if (log) console.log('caps', caps);
             if (caps?.data) {
                 for (const cap of caps.data) {
                     for (const k in cap.caps || {}) {
@@ -179,7 +187,7 @@ export const verifyAgainstReqs = <S>(reqs: Array<RequiredCapability>, config: Ve
                                 console.log(`Error verifying ucan from cap: ${cap._id}. Err:${e.message}`)
                             }
                             if (options?.log) console.log('tried v on cap', v);
-                            if (v.ok) return v;
+                            if (v?.ok) return v;
                         }
                     }
                 }
@@ -333,7 +341,7 @@ export const checkUcan = (requiredCapabilities: UcanCap, options?: UcanAuthOptio
             //     })
             //     if (hasSplitNamespace) v = await verifyAgainstReqs(reqs, configuration as VerifyConfig, options)(context);
             // }
-            if (v.ok) {
+            if (v?.ok) {
                 context.params.authenticated = true;
                 context.params.canU = true;
                 return context;
@@ -362,7 +370,7 @@ export const checkUcan = (requiredCapabilities: UcanCap, options?: UcanAuthOptio
                         }
                     }
                 }
-                console.error('Ucan capabilities requirements not met: ', v, context.type, context.path);
+                if(options?.log) console.error('Ucan capabilities requirements not met: ', v, context.type, context.path);
                 if (!options?.noThrow) throw new Error('Missing proper capabilities for this action: ' + context.type + ': ' + context.path + ' - ' + context.method);
                 else {
                     context.params._no_throw_error = {type: context.type, method: context.method, path: context.path}
