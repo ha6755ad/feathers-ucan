@@ -257,40 +257,63 @@ export const checkUcan = (requiredCapabilities: UcanCap, options?: UcanAuthOptio
                         methodsOnly = (lpass[1] as string[]).map(a => a.split('/')[0]);
                         methodIdx = methodsOnly.indexOf(context.method);
                     }
-                    //ensure loginPass is allowed for this method
+                    /**ensure loginPass is allowed for this method*/
                     if (methodIdx > -1) {
-
-                        //retrieve existing record to check ids for login id
+                        /**retrieve existing record to check ids for login id*/
                         const existing = await loadExists(context, {params: options?.existingParams});
                         let loginOk = false;
+
+                        /** function for comparing record login id with context login*/
+                        const checkLogin = (recordLoginPassId:string, loginIdPath:string = '_id') => {
+                            const loginCheckId = _get(context.params, `${configuration.entity}.${loginIdPath}`) as any;
+                            /**Make sure both are present to avoid pass on undefined*/
+                            if (loginCheckId && recordLoginPassId) {
+                                /** change login path result to array no matter what */
+                                const checkArr = Array.isArray(loginCheckId) ? loginCheckId.map(a => String(a)) : [String(loginCheckId)];
+                                if (Array.isArray(recordLoginPassId)) {
+                                    /**loop through to see if there is a match present use for loops for performance instead of some*/
+                                    for (let i = 0; i < checkArr.length; i++) {
+                                        const checkId = String(checkArr[i])
+                                        for (let rl = 0; rl < recordLoginPassId.length;) {
+                                            const rlId = String(recordLoginPassId[rl]);
+                                            if (rlId === checkId) loginOk = true;
+                                            else rl++;
+                                        }
+                                        if (loginOk) return;
+                                    }
+                                } else if (checkArr.includes(String(recordLoginPassId))) {
+                                    return loginOk = true;
+                                }
+                            } else return
+                        }
+
                         if (existing) {
                             context = setExists(context, existing);
-                            //perform the check
+                            /**perform the check*/
+                            let recordLoginPassId;
                             for (const passPath of lpass[0] || []) {
                                 const spl = passPath.split('/');
-                                const recordLoginPassId = _get(existing, spl[0]);
-                                const loginIdPath = spl[1] || '_id';
-                                const loginCheckId = _get(context.params, `${configuration.entity}.${loginIdPath}`) as any;
-                                //Make sure both are present to avoid pass on undefined
-                                if (loginCheckId && recordLoginPassId) {
-                                    // change login path result to array no matter what
-                                    const checkArr = Array.isArray(loginCheckId) ? loginCheckId.map(a => String(a)) : [String(loginCheckId)];
-                                    if (Array.isArray(recordLoginPassId)) {
-                                        //loop through to see if there is a match present use for loops for performance instead of some
-                                        for (let i = 0; i < checkArr.length; i++) {
-                                            const checkId = String(checkArr[i])
-                                            for (let rl = 0; rl < recordLoginPassId.length;) {
-                                                const rlId = String(recordLoginPassId[rl]);
-                                                if (rlId === checkId) loginOk = true;
-                                                else rl++;
+                                if(spl[0].includes('*')){
+                                    const spl2 = spl[0].split('*');
+                                    const obj = _get(existing, spl2[0]);
+                                    if(obj && typeof obj === 'object') {
+                                        if (Array.isArray(obj)) {
+                                            /** IF array, iterate through array and check the sub-path */
+                                            for (const o of obj) {
+                                                checkLogin(_get(o, spl2[1]) as string, spl[1] || '_id');
+                                                if (loginOk) break;
                                             }
-                                            if (loginOk) break;
+                                        } else {
+                                            /** IF object, iterate through object and check the sub-path */
+                                            for(const k in obj){
+                                                checkLogin(_get(obj, `${k}.${spl2[1]}`) as string, spl[1] || '_id')
+                                                if(loginOk) break;
+                                            }
                                         }
-                                    } else if (checkArr.includes(String(recordLoginPassId))) {
-                                        loginOk = true;
-                                        break;
                                     }
-                                }
+
+                                } else checkLogin(_get(existing, spl[0]) as string, spl[1] || '_id');
+
                             }
                         }
 
