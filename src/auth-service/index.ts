@@ -1,5 +1,5 @@
-import {_get, parseUcan, ucanToken, validateUcan, encodeKeyPair, buildUcan} from 'symbol-ucan';
-import {AuthenticationService, AuthenticationRequest, AuthenticationParams} from '@feathersjs/authentication';
+import {_get, buildUcan, encodeKeyPair, parseUcan, ucanToken, validateUcan} from 'symbol-ucan';
+import {AuthenticationParams, AuthenticationRequest, AuthenticationService} from '@feathersjs/authentication';
 import {AnyObj} from '../types';
 import {NullableId} from '../core';
 
@@ -52,7 +52,7 @@ export class AuthService extends AuthenticationService {
 
         const validatedUcan = await validateUcan(ucan)
             .catch(err => {
-                console.log('Could not validate ucan: ', err.message);
+                console.log('Could not validate ucan creating authentication: ', err.message);
                 const errObj = {
                     code: 0,
                     message: 'Unknown Issue Validating Ucan'
@@ -61,7 +61,7 @@ export class AuthService extends AuthenticationService {
                     errObj.code = 1;
                     errObj.message = 'Expired Ucan'
                 }
-                console.warn('Could not validate ucan', ucan, errObj.message);
+                console.warn('Could not validate ucan creating authentication', ucan, errObj.message);
                 return null;
             });
         if (!validatedUcan) {

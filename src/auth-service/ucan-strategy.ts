@@ -57,7 +57,7 @@ export class UcanStrategy extends AuthenticationBaseStrategy {
         if (accessToken && event === 'login') {
             const validUcan = await validateUcan(accessToken)
                 .catch(err => {
-                    console.log('Could not validate ucan: ', err.message);
+                    console.log('Could not validate ucan in connection: ', err.message);
                     const errObj = {
                         code: 0,
                         message: 'Unknown Issue Validating Ucan'
@@ -169,7 +169,7 @@ export class UcanStrategy extends AuthenticationBaseStrategy {
 
         const decodedUcan = await validateUcan(accessToken)
             .catch(err => {
-                console.log('Could not validate ucan: ', err.message);
+                console.log('Could not validate ucan during authentication: ', err.message);
                 const errObj = {
                     code: 0,
                     message: 'Unknown Issue Validating Ucan'
