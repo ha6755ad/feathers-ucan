@@ -49,7 +49,8 @@ export declare type UcanAuthOptions = {
     log?: boolean,
     existingParams?: AnyObj,
     specialChange?: Array<string> | AnyAuth,
-    cap_subjects?: Array<string>
+    cap_subjects?: Array<string>,
+    audience?: string
 
 }
 type RequiredCapability = { capability: Capability, rootIssuer: string }
@@ -136,23 +137,25 @@ export type VerifyConfig = {
     ucan_aud: string,
     [key: string]: any
 };
+
+type MethodOpts = { aud?:string }
 export const verifyAgainstReqs = <S>(reqs: Array<RequiredCapability>, config: VerifyConfig, options?: UcanAuthOptions) => {
     return async (context: HookContext<S>): Promise<VerifyRes> => {
         const log = options?.log
         const ucan = _get(context.params, config.client_ucan) as string;
-        const audience = _get(context.params, config.ucan_aud) as string;
+        const audience = options?.audience || _get(context.params, config.ucan_aud) as string;
         if (log) console.log('verify against reqs', reqs)
-        let vMethod: (uc?: string) => Promise<VerifyRes>
+        let vMethod: (uc?: string, methodOpts?: MethodOpts) => Promise<VerifyRes>
         const or = options?.or || []
-        if (ucan && (or === '*' || or.includes(context.method))) vMethod = (uc?: string) => orVerifyLoop((reqs || []).map(a => {
+        if (ucan && (or === '*' || or.includes(context.method))) vMethod = (uc?: string, methodOpts?: MethodOpts) => orVerifyLoop((reqs || []).map(a => {
             return {
                 ucan: uc || ucan,
-                audience,
+                audience: methodOpts?.aud || audience,
                 requiredCapabilities: [a]
             }
         }), log)
-        else vMethod = (uc?: string) => verifyOne(uc || ucan, {
-            audience,
+        else vMethod = (uc?: string, methodOpts?:MethodOpts) => verifyOne(uc || ucan, {
+            audience: methodOpts?.aud || audience,
             requiredCapabilities: reqs
         }, log) as Promise<VerifyRes>
         let v = await vMethod()
@@ -180,7 +183,7 @@ export const verifyAgainstReqs = <S>(reqs: Array<RequiredCapability>, config: Ve
                                 const ucanString = ucanToken(cap.caps[k].ucan)
                                 if (log) console.log('got ucan string', ucanString);
                                 if (ucanString) {
-                                    v = await vMethod(ucanString)
+                                    v = await vMethod(ucanString, { aud: cap.did })
                                     if (log) console.log('tried v on cap', v);
                                 }
                             } catch (e: any) {
