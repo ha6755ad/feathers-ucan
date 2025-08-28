@@ -13,7 +13,7 @@ export type AnyParams = Iterable<AnyObj>
 
 declare type CoreOpts = {
     skipJoins?: boolean,
-    admin_pass?: boolean,
+    admin_pass?: boolean
 }
 export class CoreCall {
     context:any;
