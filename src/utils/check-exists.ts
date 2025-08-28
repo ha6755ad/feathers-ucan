@@ -6,7 +6,7 @@ export const existsPath = '_exists';
 
 export const getExists = (context:Partial<HookContext>):any => {
     const path = context.app.get('existsPath') || existsPath;
-    return _get(context.params, `${path}.${context.path}.${context.id}`) || undefined;
+    return _get(context.params, `core.${path}.${context.path}.${context.id}`) || undefined;
 }
 
 export const loadExists = async (context:HookContext, options?:{ skipJoins?: boolean, params?: AnyObj }):Promise<any> => {
@@ -19,6 +19,6 @@ export const loadExists = async (context:HookContext, options?:{ skipJoins?: boo
 
 export const setExists = (context:HookContext, val:any):HookContext => {
     const path = context.app.get('existsPath') || existsPath;
-    context.params = _set(context.params, `${path}.${context.path}.${val?._id || context.id}`, val)
+    context.params = _set(context.params, `core.${path}.${context.path}.${val?._id || context.id}`, val)
     return context;
 };
