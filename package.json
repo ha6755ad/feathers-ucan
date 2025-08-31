@@ -1,6 +1,6 @@
 {
   "name": "feathers-ucan",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "description": "Ucan extension of feathers jwt auth",
   "source": "src/index.ts",
   "unpkg": "lib/index.umd.js",
@@ -8,16 +8,45 @@
   "module": "lib/index.module.js",
   "types": "lib/index.d.ts",
   "type": "module",
+  "sideEffects": false,
   "exports": {
-    "types": "./lib/index.d.ts",
-    "require": "./lib/index.cjs",
-    "default": "./lib/index.modern.js"
+    ".": {
+      "types": "./lib/index.d.ts",
+      "require": "./lib/index.cjs",
+      "default": "./lib/index.modern.js"
+    },
+    "./auth-service": {
+      "types": "./lib/auth-service.d.ts",
+      "import": "./lib/auth-service.js",
+      "require": "./lib/auth-service.cjs"
+    },
+    "./core": {
+      "types": "./lib/core.d.ts",
+      "import": "./lib/core.js",
+      "require": "./lib/core.cjs"
+    },
+    "./hooks": {
+      "types": "./lib/hooks.d.ts",
+      "import": "./lib/hooks.js",
+      "require": "./lib/hooks.cjs"
+    },
+    "./types": {
+      "types": "./lib/types.d.ts",
+      "import": "./lib/types.js",
+      "require": "./lib/types.cjs"
+    },
+    "./utils": {
+      "types": "./lib/utils.d.ts",
+      "import": "./lib/utils.js",
+      "require": "./lib/utils.cjs"
+    }
   },
   "scripts": {
     "test": "test",
     "prebuild": "rimraf lib dist && node scripts/gen-version.js",
-    "build": "rm -rf lib && microbundle --tsconfig tsconfig.json",
-    "dev": "microbundle --watch --tsconfig tsconfig.json --no-sourcemap"
+    "build": "rm -rf lib && microbundle --tsconfig tsconfig.json && node scripts/create-submodule-exports.js",
+    "dev": "microbundle --watch --tsconfig tsconfig.json --no-sourcemap",
+    "dev:modules": "microbundle src/auth-service.ts src/core.ts src/hooks.ts src/types.ts src/utils.ts --watch --tsconfig tsconfig.json --no-sourcemap --no-pkg-main"
   },
   "files": [
     "lib"
