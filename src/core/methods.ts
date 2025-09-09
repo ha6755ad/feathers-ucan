@@ -36,7 +36,7 @@ export class CoreCall {
     }
     async find (params:AnyObj = {}){
         const {core_path} = this.context.app.get('authentication');
-        return this.context.app?.service(this.service).find({...params as AnyParams, [this.entity]: params[this.entity], ...{ [core_path]: this.core }})
+        return this.context.app?.service(this.service).find({...params as AnyParams, [this.entity]: params[this.entity], skip_hooks:true, admin_pass:true, ...{ [core_path]: this.core }})
     }
     async create (data:AnyObj, params:AnyObj = {}){
         const {core_path} = this.context.app.get('authentication');

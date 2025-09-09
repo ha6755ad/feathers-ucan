@@ -170,7 +170,9 @@ export const verifyAgainstReqs = <S>(reqs: Array<RequiredCapability>, config: Ve
                 query: {
                     $limit: cs.length,
                     subject: {$in: cs}
-                }
+                },
+                skip_hooks:true,
+                admin_pass:true
             })
                 .catch(err => console.log(`Error finding caps in ucan auth: ${err.message}`))
             if (log) console.log('caps', caps);

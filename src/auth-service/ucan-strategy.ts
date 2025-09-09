@@ -145,7 +145,7 @@ export class UcanStrategy extends AuthenticationBaseStrategy {
                 query: {...query, $limit: 1},
                 [core_path]: {skipJoins: true, ..._params[core_path]}
             }
-            const entities = await this.app?.service(service).find({...pms, skipJoins: true} as any);
+            const entities = await this.app?.service(service).find({...pms, skipJoins: true, skip_hooks: true, admin_pass: true} as any);
             if (entities.total) return entities.data[0]._id;
             else throw new NotAuthError('Could not find login associated with this ucan');
         }
