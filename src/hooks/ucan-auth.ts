@@ -110,8 +110,8 @@ const verifyOne = async (ucan: string, options: VerifyOptions, log?: boolean) =>
             if (log) console.log('Second verification result:', v);
         }
         return v;
-    } catch(e:any){
-        return { ok: false, err: [e.message] }
+    } catch (e: any) {
+        return {ok: false, err: [e.message]}
     }
 };
 export const orVerifyLoop = async (arr: Array<VerifyOne>, log?: boolean): Promise<VerifyRes> => {
@@ -127,7 +127,7 @@ export const orVerifyLoop = async (arr: Array<VerifyOne>, log?: boolean): Promis
             } else break;
         }
         return v;
-    } catch (e:any) {
+    } catch (e: any) {
         return {ok: false, err: [e.message]}
     }
 }
@@ -138,7 +138,7 @@ export type VerifyConfig = {
     [key: string]: any
 };
 
-type MethodOpts = { aud?:string }
+type MethodOpts = { aud?: string }
 export const verifyAgainstReqs = <S>(reqs: Array<RequiredCapability>, config: VerifyConfig, options?: UcanAuthOptions) => {
     return async (context: HookContext<S>): Promise<VerifyRes> => {
         const log = options?.log
@@ -154,7 +154,7 @@ export const verifyAgainstReqs = <S>(reqs: Array<RequiredCapability>, config: Ve
                 requiredCapabilities: [a]
             }
         }), log)
-        else vMethod = (uc?: string, methodOpts?:MethodOpts) => verifyOne(uc || ucan, {
+        else vMethod = (uc?: string, methodOpts?: MethodOpts) => verifyOne(uc || ucan, {
             audience: methodOpts?.aud || audience,
             requiredCapabilities: reqs
         }, log) as Promise<VerifyRes>
@@ -171,8 +171,8 @@ export const verifyAgainstReqs = <S>(reqs: Array<RequiredCapability>, config: Ve
                     $limit: cs.length,
                     subject: {$in: cs}
                 },
-                skip_hooks:true,
-                admin_pass:true
+                skip_hooks: true,
+                admin_pass: true
             })
                 .catch(err => console.log(`Error finding caps in ucan auth: ${err.message}`))
             if (log) console.log('caps', caps);
@@ -185,7 +185,7 @@ export const verifyAgainstReqs = <S>(reqs: Array<RequiredCapability>, config: Ve
                                 const ucanString = ucanToken(cap.caps[k].ucan)
                                 if (log) console.log('got ucan string', ucanString);
                                 if (ucanString) {
-                                    v = await vMethod(ucanString, { aud: cap.did })
+                                    v = await vMethod(ucanString, {aud: cap.did})
                                     if (log) console.log('tried v on cap', v);
                                 }
                             } catch (e: any) {
@@ -245,117 +245,7 @@ export const checkUcan = (requiredCapabilities: UcanCap, options?: UcanAuthOptio
             context.params.canU = true;
             return context
         } else {
-            //If creator pass enabled, check to see if the auth login is the creator of the record
-            const {loginPass} = options || {loginPass: [[['*'], ['nonExistentMethod']]]}
-            if (loginPass?.length) {
-                //object of scrubbed data object for pass that includes only limited access or full context.data object if no limits were present
-                let scrubbedData: AnyObj = {};
-                //scruData defaults to true - is only set to false
-                let scrubData = true;
-                const checkLoginPass = async (lpass: LoginPassOption) => {
-                    let methodsOnly = [];
-                    const allMethods = lpass[1] === '*';
-                    let methodIdx = -1;
-                    if (allMethods) methodIdx = 0;
-                    else {
-                        //separate out any field specific methods e.g. patch/name,avatar
-                        methodsOnly = (lpass[1] as string[]).map(a => a.split('/')[0]);
-                        methodIdx = methodsOnly.indexOf(context.method);
-                    }
-                    /**ensure loginPass is allowed for this method*/
-                    if (methodIdx > -1) {
-                        /**retrieve existing record to check ids for login id*/
-                        const existing = await loadExists(context, {params: options?.existingParams});
-                        let loginOk = false;
 
-                        /** function for comparing record login id with context login*/
-                        const checkLogin = (recordLoginPassId:string, loginIdPath:string = '_id') => {
-                            const loginCheckId = _get(context.params, `${configuration.entity}.${loginIdPath}`) as any;
-                            /**Make sure both are present to avoid pass on undefined*/
-                            if (loginCheckId && recordLoginPassId) {
-                                /** change login path result to array no matter what */
-                                const checkArr = Array.isArray(loginCheckId) ? loginCheckId.map(a => String(a)) : [String(loginCheckId)];
-                                if (Array.isArray(recordLoginPassId)) {
-                                    /**loop through to see if there is a match present use for loops for performance instead of some*/
-                                    for (let i = 0; i < checkArr.length; i++) {
-                                        const checkId = String(checkArr[i])
-                                        for (let rl = 0; rl < recordLoginPassId.length;) {
-                                            const rlId = String(recordLoginPassId[rl]);
-                                            if (rlId === checkId) loginOk = true;
-                                            else rl++;
-                                        }
-                                        if (loginOk) return;
-                                    }
-                                } else if (checkArr.includes(String(recordLoginPassId))) {
-                                    return loginOk = true;
-                                }
-                            } else return
-                        }
-
-                        if (existing) {
-                            context = setExists(context, existing);
-                            /**perform the check*/
-                            let recordLoginPassId;
-                            for (const passPath of lpass[0] || []) {
-                                const spl = passPath.split('/');
-                                if(spl[0].includes('*')){
-                                    const spl2 = spl[0].split('*');
-                                    const obj = _get(existing, spl2[0]);
-                                    if(obj && typeof obj === 'object') {
-                                        if (Array.isArray(obj)) {
-                                            /** IF array, iterate through array and check the sub-path */
-                                            for (const o of obj) {
-                                                checkLogin(_get(o, spl2[1]) as string, spl[1] || '_id');
-                                                if (loginOk) break;
-                                            }
-                                        } else {
-                                            /** IF object, iterate through object and check the sub-path */
-                                            for(const k in obj){
-                                                checkLogin(_get(obj, `${k}.${spl2[1]}`) as string, spl[1] || '_id')
-                                                if(loginOk) break;
-                                            }
-                                        }
-                                    }
-
-                                } else checkLogin(_get(existing, spl[0]) as string, spl[1] || '_id');
-
-                            }
-                        }
-
-                        if (loginOk) {
-                            v.ok = true
-                            /**loginPass is true - but check for granular field permissions such as patch/owner,color,status that imply limited permission*/
-                            //TODO: possibly a throw option here. If loginPass is ok, it will go forward, but could send an empty or modified patch object
-                            if (!(lpass[1] === '*' || ['find', 'get', 'remove'].some(a => lpass[1].includes(a)))) {
-                                const currentMethod = allMethods ? '*' : lpass[1][methodIdx];
-                                const splitMethod = currentMethod.split('/')[0];
-                                //check if current method contains a split '/' signaling limited permission check
-                                if (splitMethod !== currentMethod) {
-                                    //get an array of the allowed fields
-                                    const fields = currentMethod.split('/').slice(1).join('').split(',') || [];
-
-                                    for (const field of fields) {
-                                        const topLevel = _get(context.data, field);
-                                        if (topLevel) scrubbedData = _set(scrubbedData, field, topLevel);
-                                        else {
-                                            for (const operator of ['$addToSet', '$pull']) {
-                                                const operatorLevel = _get(context.data, `${operator}.${field}`);
-                                                if (operatorLevel) scrubbedData = _set(scrubbedData, `${operator}.${field}`, operatorLevel);
-                                            }
-                                        }
-                                    }
-                                } else scrubData = false;
-                            } else scrubData = false;
-                        }
-                    }
-                }
-
-                for await (const lpass of loginPass) {
-                    if (scrubData) await checkLoginPass(lpass);
-                    else break;
-                }
-                if (scrubData) context = _set(context, 'data', scrubbedData);
-            }
             // if (!v?.ok) {
             //     let hasSplitNamespace = false;
             //     const reducedReqs: Array<RequiredCapability> = [];
@@ -369,36 +259,151 @@ export const checkUcan = (requiredCapabilities: UcanCap, options?: UcanAuthOptio
             //     })
             //     if (hasSplitNamespace) v = await verifyAgainstReqs(reqs, configuration as VerifyConfig, options)(context);
             // }
+
+
+            if (options?.log) console.log('checking special change', options?.specialChange);
+            if (options?.specialChange) {
+                if (options.specialChange === anyAuth) {
+                    context.params.canU = true;
+                    return context;
+                } else if (Array.isArray(options.specialChange)) {
+                    if (['create', 'patch', 'update'].includes(context.method)) {
+                        if (Array.isArray(context.data)) throw new Error('No multi data allowed with special change')
+                        for (const k in context.data || {}) {
+                            if (['$set', '$unset', '$addToSet', '$pull', '$push'].includes(k)) {
+                                for (const sk in context.data[k] || {}) {
+                                    if (!options.specialChange.includes(sk)) {
+                                        const spl = sk.split('.');
+                                        if (spl.length === 1) delete context.data[k][sk];
+                                        else if (!options.specialChange.includes(spl[0])) delete context.data[k][sk]
+                                    }
+                                }
+                            } else if (!options.specialChange.includes(k)) delete context.data[k];
+                        }
+                        context.params.canU = true;
+                        return context;
+                    }
+                }
+            }
             if (v?.ok) {
                 context.params.authenticated = true;
                 context.params.canU = true;
                 return context;
             } else {
-                if (options?.log) console.log('checking special change', options?.specialChange);
-                if (options?.specialChange) {
-                    if (options.specialChange === anyAuth) {
-                        context.params.canU = true;
-                        return context;
-                    } else if (Array.isArray(options.specialChange)) {
-                        if (['create', 'patch', 'update'].includes(context.method)) {
-                            if (Array.isArray(context.data)) throw new Error('No multi data allowed with special change')
-                            for (const k in context.data || {}) {
-                                if (['$set', '$unset', '$addToSet', '$pull', '$push'].includes(k)) {
-                                    for (const sk in context.data[k] || {}) {
-                                        if (!options.specialChange.includes(sk)) {
-                                            const spl = sk.split('.');
-                                            if (spl.length === 1) delete context.data[k][sk];
-                                            else if (!options.specialChange.includes(spl[0])) delete context.data[k][sk]
+
+                //If creator pass enabled, check to see if the auth login is the creator of the record
+                const {loginPass} = options || {loginPass: [[['*'], ['nonExistentMethod']]]}
+                if (loginPass?.length) {
+                    //object of scrubbed data object for pass that includes only limited access or full context.data object if no limits were present
+                    let scrubbedData: AnyObj = {};
+                    //scruData defaults to true - is only set to false
+                    let scrubData = true;
+                    const checkLoginPass = async (lpass: LoginPassOption) => {
+                        let methodsOnly = [];
+                        const allMethods = lpass[1] === '*';
+                        let methodIdx = -1;
+                        if (allMethods) methodIdx = 0;
+                        else {
+                            //separate out any field specific methods e.g. patch/name,avatar
+                            methodsOnly = (lpass[1] as string[]).map(a => a.split('/')[0]);
+                            methodIdx = methodsOnly.indexOf(context.method);
+                        }
+                        /**ensure loginPass is allowed for this method*/
+                        if (methodIdx > -1) {
+                            /**retrieve existing record to check ids for login id*/
+                            const existing = await loadExists(context, {params: options?.existingParams});
+                            let loginOk = false;
+
+                            /** function for comparing record login id with context login*/
+                            const checkLogin = (recordLoginPassId: string, loginIdPath: string = '_id') => {
+                                const loginCheckId = _get(context.params, `${configuration.entity}.${loginIdPath}`) as any;
+                                /**Make sure both are present to avoid pass on undefined*/
+                                if (loginCheckId && recordLoginPassId) {
+                                    /** change login path result to array no matter what */
+                                    const checkArr = Array.isArray(loginCheckId) ? loginCheckId.map(a => String(a)) : [String(loginCheckId)];
+                                    if (Array.isArray(recordLoginPassId)) {
+                                        /**loop through to see if there is a match present use for loops for performance instead of some*/
+                                        for (let i = 0; i < checkArr.length; i++) {
+                                            const checkId = String(checkArr[i])
+                                            for (let rl = 0; rl < recordLoginPassId.length;) {
+                                                const rlId = String(recordLoginPassId[rl]);
+                                                if (rlId === checkId) loginOk = true;
+                                                else rl++;
+                                            }
+                                            if (loginOk) return;
                                         }
+                                    } else if (checkArr.includes(String(recordLoginPassId))) {
+                                        return loginOk = true;
                                     }
-                                } else if (!options.specialChange.includes(k)) delete context.data[k];
+                                } else return
                             }
-                            context.params.canU = true;
-                            return context;
+
+                            if (existing) {
+                                context = setExists(context, existing);
+                                /**perform the check*/
+                                let recordLoginPassId;
+                                for (const passPath of lpass[0] || []) {
+                                    const spl = passPath.split('/');
+                                    if (spl[0].includes('*')) {
+                                        const spl2 = spl[0].split('*');
+                                        const obj = _get(existing, spl2[0]);
+                                        if (obj && typeof obj === 'object') {
+                                            if (Array.isArray(obj)) {
+                                                /** IF array, iterate through array and check the sub-path */
+                                                for (const o of obj) {
+                                                    checkLogin(_get(o, spl2[1]) as string, spl[1] || '_id');
+                                                    if (loginOk) break;
+                                                }
+                                            } else {
+                                                /** IF object, iterate through object and check the sub-path */
+                                                for (const k in obj) {
+                                                    checkLogin(_get(obj, `${k}.${spl2[1]}`) as string, spl[1] || '_id')
+                                                    if (loginOk) break;
+                                                }
+                                            }
+                                        }
+
+                                    } else checkLogin(_get(existing, spl[0]) as string, spl[1] || '_id');
+
+                                }
+                            }
+
+                            if (loginOk) {
+                                v.ok = true
+                                /**loginPass is true - but check for granular field permissions such as patch/owner,color,status that imply limited permission*/
+                                //TODO: possibly a throw option here. If loginPass is ok, it will go forward, but could send an empty or modified patch object
+                                if (lpass[1] !== '*' && !['find', 'get', 'remove'].some(a => lpass[1].includes(a))) {
+                                    const currentMethod = allMethods ? '*' : lpass[1][methodIdx];
+                                    const splitMethod = currentMethod.split('/')[0];
+                                    //check if current method contains a split '/' signaling limited permission check
+                                    if (splitMethod !== currentMethod) {
+                                        //get an array of the allowed fields
+                                        const fields = currentMethod.split('/').slice(1).join('').split(',') || [];
+
+                                        for (const field of fields) {
+                                            const topLevel = _get(context.data, field);
+                                            if (topLevel) scrubbedData = _set(scrubbedData, field, topLevel);
+                                            else {
+                                                for (const operator of ['$addToSet', '$pull']) {
+                                                    const operatorLevel = _get(context.data, `${operator}.${field}`);
+                                                    if (operatorLevel) scrubbedData = _set(scrubbedData, `${operator}.${field}`, operatorLevel);
+                                                }
+                                            }
+                                        }
+                                    } else scrubData = false;
+                                } else scrubData = false;
+                            }
                         }
                     }
+
+                    for await (const lpass of loginPass) {
+                        if (scrubData) await checkLoginPass(lpass);
+                        else break;
+                    }
+                    if (scrubData) context = _set(context, 'data', scrubbedData);
                 }
-                if(options?.log) console.error('Ucan capabilities requirements not met: ', v, context.type, context.path);
+
+                if (options?.log) console.error('Ucan capabilities requirements not met: ', v, context.type, context.path);
                 if (!options?.noThrow) throw new Error('Missing proper capabilities for this action: ' + context.type + ': ' + context.path + ' - ' + context.method);
                 else {
                     context.params._no_throw_error = {type: context.type, method: context.method, path: context.path}
