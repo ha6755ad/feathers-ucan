@@ -343,7 +343,7 @@ export const checkUcan = (requiredCapabilities: UcanCap, options?: UcanAuthOptio
                                 /**perform the check*/
                                 let recordLoginPassId;
                                 for (const passPath of lpass[0] || []) {
-                                    const spl = passPath.split('/');
+                                    const spl = String(passPath).split('/');
                                     if (spl[0].includes('*')) {
                                         const spl2 = spl[0].split('*');
                                         const obj = _get(existing, spl2[0]);
