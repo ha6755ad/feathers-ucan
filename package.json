@@ -1,6 +1,6 @@
 {
   "name": "feathers-ucan",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "Ucan extension of feathers jwt auth",
   "source": "src/index.ts",
   "unpkg": "lib/index.umd.js",

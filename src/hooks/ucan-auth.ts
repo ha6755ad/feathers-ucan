@@ -403,11 +403,22 @@ export const checkUcan = (requiredCapabilities: UcanCap, options?: UcanAuthOptio
                     if (scrubData) context = _set(context, 'data', scrubbedData);
                 }
 
-                if (options?.log) console.error('Ucan capabilities requirements not met: ', v, context.type, context.path);
-                if (!options?.noThrow) throw new Error('Missing proper capabilities for this action: ' + context.type + ': ' + context.path + ' - ' + context.method);
-                else {
-                    context.params._no_throw_error = {type: context.type, method: context.method, path: context.path}
+                if (v?.ok) {
+                    context.params.authenticated = true;
+                    context.params.canU = true;
                     return context;
+                } else {
+
+                    if (options?.log) console.error('Ucan capabilities requirements not met: ', v, context.type, context.path);
+                    if (!options?.noThrow) throw new Error('Missing proper capabilities for this action: ' + context.type + ': ' + context.path + ' - ' + context.method);
+                    else {
+                        context.params._no_throw_error = {
+                            type: context.type,
+                            method: context.method,
+                            path: context.path
+                        }
+                        return context;
+                    }
                 }
             }
         }
