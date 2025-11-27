@@ -1,4 +1,4 @@
-import {AnyObj} from '../types';
+type AnyObj = any
 
 export type Id = number | string
 export type NullableId = Id | null

@@ -1,6 +1,8 @@
 import {_get, _set} from 'symbol-ucan';
-import {AnyObj, HookContext} from '../types';
+import {HookContext} from '../types';
 import {CoreCall} from '../core';
+
+type AnyObj = any
 
 export const existsPath = '_exists';
 

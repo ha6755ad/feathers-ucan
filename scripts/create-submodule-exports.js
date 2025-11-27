@@ -32,12 +32,12 @@ modules.forEach(module => {
   switch(module) {
     case 'auth-service':
       moduleExports = `// Auth Service Module
-import { AuthService, NotAuthError, UcanStrategy } from '../index.module.js';
+import { AuthService, NotAuthError, UcanStrategy } from '../index.modern.js';
 export { AuthService, NotAuthError, UcanStrategy };`;
       break;
     case 'core':
       moduleExports = `// Core Module
-import { CoreCall } from '../index.module.js';
+import { CoreCall } from '../index.modern.js';
 export { CoreCall };`;
       break;
     case 'hooks':
@@ -50,7 +50,7 @@ import {
   updateUcan,
   anyAuth,
   noThrow
-} from '../index.module.js';
+} from '../index.modern.js';
 export {
   ucanAuth,
   allUcanAuth,
@@ -69,7 +69,7 @@ export {};`;
       break;
     case 'utils':
       moduleExports = `// Utils Module
-import { loadExists, setExists, getExists, existsPath } from '../index.module.js';
+import { loadExists, setExists, getExists, existsPath } from '../index.modern.js';
 export { loadExists, setExists, getExists, existsPath };`;
       break;
   }
@@ -80,8 +80,50 @@ export { loadExists, setExists, getExists, existsPath };`;
   const esContent = `export * from './${module}/index.js';`;
   fs.writeFileSync(path.join('lib', `${module}.js`), esContent);
 
-  const cjsContent = `const mod = require('./${module}/index.js');
-module.exports = mod;`;
+  // Create CommonJS entry that re-exports from the CJS bundle directly
+  let cjsContent = '';
+  switch (module) {
+    case 'auth-service':
+      cjsContent = `"use strict";
+const { AuthService, NotAuthError, UcanStrategy } = require('./index.cjs');
+module.exports = { AuthService, NotAuthError, UcanStrategy };`;
+      break;
+    case 'core':
+      cjsContent = `"use strict";
+const { CoreCall } = require('./index.cjs');
+module.exports = { CoreCall };`;
+      break;
+    case 'hooks':
+      cjsContent = `"use strict";
+const {
+  ucanAuth,
+  allUcanAuth,
+  noThrowAuth,
+  bareAuth,
+  updateUcan,
+  anyAuth,
+  noThrow
+} = require('./index.cjs');
+module.exports = {
+  ucanAuth,
+  allUcanAuth,
+  noThrowAuth,
+  bareAuth,
+  updateUcan,
+  anyAuth,
+  noThrow
+};`;
+      break;
+    case 'types':
+      // No runtime exports for types
+      cjsContent = '"use strict"; module.exports = {};';
+      break;
+    case 'utils':
+      cjsContent = `"use strict";
+const { loadExists, setExists, getExists, existsPath } = require('./index.cjs');
+module.exports = { loadExists, setExists, getExists, existsPath };`;
+      break;
+  }
   fs.writeFileSync(path.join('lib', `${module}.cjs`), cjsContent);
 
   // Create top-level .d.ts file that re-exports from nested index.d.ts
@@ -146,23 +188,51 @@ filesToFixImports.forEach(filePath => {
 
 console.log('✅ Converted type imports to prevent duplicate exports');
 
-// Replace main index.d.ts with direct exports that TypeScript can resolve
+// Remove AnyObj type declarations and replace with 'any' directly
+const filesToRemoveAnyObj = [
+  'lib/core/methods.d.ts',
+  'lib/hooks/ucan-auth.d.ts',
+  'lib/utils/check-exists.d.ts',
+  'lib/auth-service/index.d.ts'
+];
+
+filesToRemoveAnyObj.forEach(filePath => {
+  if (fs.existsSync(filePath)) {
+    let content = fs.readFileSync(filePath, 'utf8');
+    const originalContent = content;
+
+    // Remove the AnyObj type declaration line
+    content = content.replace(/^type AnyObj = any;?\s*$/gm, '');
+
+    // Replace all usages of AnyObj with any
+    content = content.replace(/\bAnyObj\b/g, 'any');
+
+    if (content !== originalContent) {
+      fs.writeFileSync(filePath, content, 'utf8');
+      console.log(`✅ Removed AnyObj from ${filePath}`);
+    }
+  }
+});
+
+console.log('✅ Cleaned up AnyObj type declarations');
+
+// Replace main index.d.ts with proper re-exports for bundler module resolution
 const mainIndexDts = 'lib/index.d.ts';
 if (fs.existsSync(mainIndexDts)) {
-  // List all actual declaration files to avoid nested re-export resolution issues
-  const filesToExport = [
-    './auth-service/index',
-    './core/methods',
-    './hooks/ucan-auth',
-    './hooks/update-ucan',
-    './types/index',
-    './utils/check-exists'
-  ];
+  // Use proper export statements that work with bundler module resolution
+  // TypeScript with bundler resolution expects explicit .js extensions in imports
+  // but will resolve to .d.ts files automatically
+  let bundledContent = '// Re-export all submodules for bundler compatibility\n\n';
 
-  const bundledContent = filesToExport.map(file => `export * from '${file}';`).join('\n') + '\n';
+  bundledContent += `export * from './types/index';\n`;
+  bundledContent += `export * from './core/methods';\n`;
+  bundledContent += `export * from './hooks/ucan-auth';\n`;
+  bundledContent += `export * from './hooks/update-ucan';\n`;
+  bundledContent += `export * from './utils/check-exists';\n`;
+  bundledContent += `export * from './auth-service/index';\n`;
 
   fs.writeFileSync(mainIndexDts, bundledContent, 'utf8');
-  console.log(`✅ Generated bundled index.d.ts with all file exports`);
+  console.log(`✅ Generated index.d.ts with proper re-exports`);
 }
 
 console.log('✅ Cleaned up TypeScript declaration files');

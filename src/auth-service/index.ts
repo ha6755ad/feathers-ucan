@@ -1,7 +1,8 @@
 import {_get, buildUcan, encodeKeyPair, parseUcan, ucanToken, validateUcan} from 'symbol-ucan';
 import {AuthenticationParams, AuthenticationRequest, AuthenticationService} from '@feathersjs/authentication';
-import {AnyObj} from '../types';
 import {NullableId} from '../core';
+
+type AnyObj = any
 
 export class NotAuthError extends Error {
     constructor(message?: string) {

@@ -45,7 +45,7 @@ import {
 
 #### Types Only (TypeScript)
 ```typescript
-import type { AnyObj, HookContext } from 'feathers-ucan/types';
+import type { HookContext } from 'feathers-ucan/types';
 ```
 
 #### Utilities
@@ -73,7 +73,6 @@ Using granular imports can significantly reduce your bundle size:
 
 // Import only the hooks you need:
 import { ucanAuth, allUcanAuth } from 'feathers-ucan/hooks';
-import { AnyObj } from 'feathers-ucan/types';
 
 // Your code here...
 ```

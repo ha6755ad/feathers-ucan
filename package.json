@@ -1,6 +1,6 @@
 {
   "name": "feathers-ucan",
-  "version": "0.1.18",
+  "version": "0.1.19",
   "description": "Ucan extension of feathers jwt auth",
   "source": "src/index.ts",
   "type": "module",
@@ -68,7 +68,7 @@
     "eslint-config-prettier": "^8.1.0",
     "microbundle": "^0.15.1",
     "prettier": "^2.5.1",
-    "typescript": "^4.5.4"
+    "typescript": "^5.7.3"
   },
   "dependencies": {
     "@feathersjs/authentication": "^5.0.11",

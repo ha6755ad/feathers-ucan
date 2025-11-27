@@ -1,4 +1,4 @@
-import {AnyObj, HookContext} from '../types';
+import {HookContext} from '../types';
 import {authenticate} from '@feathersjs/authentication';
 import {
     _get,
@@ -13,6 +13,8 @@ import {
 } from 'symbol-ucan';
 import {loadExists, setExists} from '../utils';
 import {CoreCall} from '../core';
+
+type AnyObj = any
 
 const SUPERUSER = '*'
 
