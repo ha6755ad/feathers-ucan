@@ -140,4 +140,23 @@ duplicateTypeFiles.forEach(filePath => {
   }
 });
 
+// Fix main index.d.ts to use nested paths for proper re-exports
+const mainIndexDts = 'lib/index.d.ts';
+if (fs.existsSync(mainIndexDts)) {
+  let content = fs.readFileSync(mainIndexDts, 'utf8');
+  const originalContent = content;
+
+  // Replace flat re-exports with nested ones to match actual directory structure
+  content = content.replace(/export \* from '\.\/auth-service';/g, "export * from './auth-service/index';");
+  content = content.replace(/export \* from '\.\/core';/g, "export * from './core/index';");
+  content = content.replace(/export \* from '\.\/hooks';/g, "export * from './hooks/index';");
+  content = content.replace(/export \* from '\.\/types';/g, "export * from './types/index';");
+  content = content.replace(/export \* from '\.\/utils';/g, "export * from './utils/index';");
+
+  if (content !== originalContent) {
+    fs.writeFileSync(mainIndexDts, content, 'utf8');
+    console.log(`✅ Fixed main index.d.ts re-export paths`);
+  }
+}
+
 console.log('✅ Cleaned up TypeScript declaration files');
