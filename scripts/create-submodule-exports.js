@@ -107,13 +107,35 @@ const problematicFiles = [
 problematicFiles.forEach(filePath => {
   if (fs.existsSync(filePath)) {
     let content = fs.readFileSync(filePath, 'utf8');
-    // Remove export {}; statements (with optional semicolon and whitespace)
     const originalContent = content;
+
+    // Remove export {}; statements (with optional semicolon and whitespace)
     content = content.replace(/^export \{\};?\s*$/gm, '');
 
     if (content !== originalContent) {
       fs.writeFileSync(filePath, content, 'utf8');
       console.log(`✅ Removed empty export from ${filePath}`);
+    }
+  }
+});
+
+// Fix duplicate AnyObj export by converting import to import type
+const duplicateTypeFiles = [
+  'lib/core/methods.d.ts',
+  'lib/hooks/ucan-auth.d.ts'
+];
+
+duplicateTypeFiles.forEach(filePath => {
+  if (fs.existsSync(filePath)) {
+    let content = fs.readFileSync(filePath, 'utf8');
+    const originalContent = content;
+
+    // Convert "import { AnyObj" to "import type { AnyObj" to prevent re-export
+    content = content.replace(/^import \{ (AnyObj[^}]*) \} from/gm, 'import type { $1 } from');
+
+    if (content !== originalContent) {
+      fs.writeFileSync(filePath, content, 'utf8');
+      console.log(`✅ Fixed duplicate type exports in ${filePath}`);
     }
   }
 });

@@ -1,19 +1,15 @@
 {
   "name": "feathers-ucan",
-  "version": "0.1.11",
+  "version": "0.1.12",
   "description": "Ucan extension of feathers jwt auth",
   "source": "src/index.ts",
-  "unpkg": "lib/index.umd.js",
-  "main": "lib/index.js",
-  "module": "lib/index.module.js",
-  "types": "lib/index.d.ts",
   "type": "module",
   "sideEffects": false,
   "exports": {
     ".": {
       "types": "./lib/index.d.ts",
-      "require": "./lib/index.cjs",
-      "default": "./lib/index.modern.js"
+      "import": "./lib/index.modern.js",
+      "require": "./lib/index.cjs"
     },
     "./auth-service": {
       "types": "./lib/auth-service.d.ts",
@@ -41,6 +37,10 @@
       "require": "./lib/utils.cjs"
     }
   },
+  "main": "./lib/index.cjs",
+  "module": "./lib/index.modern.js",
+  "unpkg": "./lib/index.umd.js",
+  "types": "./lib/index.d.ts",
   "scripts": {
     "test": "test",
     "prebuild": "rimraf lib dist && node scripts/gen-version.js",
