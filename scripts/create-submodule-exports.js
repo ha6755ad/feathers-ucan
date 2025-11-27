@@ -84,7 +84,38 @@ export { loadExists, setExists, getExists, existsPath };`;
 module.exports = mod;`;
   fs.writeFileSync(path.join('lib', `${module}.cjs`), cjsContent);
 
+  // Create top-level .d.ts file that re-exports from nested index.d.ts
+  const nestedDtsPath = path.join(outDir, 'index.d.ts');
+  if (fs.existsSync(nestedDtsPath)) {
+    const dtsContent = `export * from './${module}/index';`;
+    fs.writeFileSync(path.join('lib', `${module}.d.ts`), dtsContent);
+  }
+
   console.log(`✅ Created ${module} module exports`);
 });
 
 console.log('✅ Created submodule export files');
+
+// Post-process: Remove problematic export {}; statements from .d.ts files
+const problematicFiles = [
+  'lib/core/methods.d.ts',
+  'lib/auth-service/ucan-strategy.d.ts',
+  'lib/hooks/ucan-auth.d.ts',
+  'lib/scripts/gen-version.d.ts'
+];
+
+problematicFiles.forEach(filePath => {
+  if (fs.existsSync(filePath)) {
+    let content = fs.readFileSync(filePath, 'utf8');
+    // Remove export {}; statements (with optional semicolon and whitespace)
+    const originalContent = content;
+    content = content.replace(/^export \{\};?\s*$/gm, '');
+
+    if (content !== originalContent) {
+      fs.writeFileSync(filePath, content, 'utf8');
+      console.log(`✅ Removed empty export from ${filePath}`);
+    }
+  }
+});
+
+console.log('✅ Cleaned up TypeScript declaration files');
