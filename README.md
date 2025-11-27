@@ -62,6 +62,8 @@ You'll need the following config options under `default.json` `authentication` s
 
 **core:** Our chosen implementation is to pass what we label `core` params - the path to "core" is configurable in the app configuration as well. This allows us to pass along key authentication data from call to call internally so we don't lose our ucan context as we go. 
 
+**channels upgrade to core** Since params are passed along on a per-call basis, optionally your application can store the user object at the configured [user] path (same as the path used for core params) on the connection object. This allows the same user to be used across multiple calls without needing to refresh params and reauthenticate/call the users service. We found often our users service was being called dozens of time from a single client view due to fresh params being used for many simple database calls requiring authentication.
+
 It's worth noting that the `client_ucan` is typically the calling user's `ucan` token - so it would be accessible in vanilla feathers under `context.auth.user[ucan_path]`. The `ucan_aud` is a `did` and we also save this on the user - so it too would be accessible there. We simply use the core options to avoid redundant calls to authentication on internal calls.
 
 Also worth noting is that we expose a `CoreCall` class that allows you to make feathers service calls and automatically pass core params along in the call. We have found this to be extensible and useful over time.

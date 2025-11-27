@@ -431,12 +431,16 @@ export const ucanAuth = <S>(requiredCapabilities?: UcanCap, options?: UcanAuthOp
         const core_path = configuration.core_path || 'core';
         const entity = configuration.entity || 'login';
 
-        const {_id: loginId} = _get(context.params, [core_path, entity]) || context.params?.login || {_id: undefined}
-        if (options?.log) console.log('ucan auth', 'loginId', loginId, 'core_path', core_path, 'entity', entity, 'core', context.params[core_path], 'params login', context.params.login, 'required capabilities', requiredCapabilities);
+        const existingLogin:any = _get(context.params, [core_path, entity]) || _get(context.params, 'login') || _get(context.params.connect, entity);
+        const loginId = typeof existingLogin === 'string' ? existingLogin : existingLogin?._id;
+        const hasLogin = !!(existingLogin && (typeof existingLogin === 'string' || !!loginId));
+        const existingUcan = _get(context.params, configuration.client_ucan || 'client_ucan');
+        if (options?.log) console.log('ucan auth', 'hasLogin', hasLogin, 'loginId', loginId, 'existingUcan', !!existingUcan, 'core_path', core_path, 'entity', entity, 'core', context.params[core_path], 'params login', context.params.login, 'required capabilities', requiredCapabilities);
         //Below for passing through auth with no required capabilities
-        if (requiredCapabilities === noThrow || (requiredCapabilities && requiredCapabilities[context.method] === noThrow)) return loginId ? context : await noThrowAuth(context);
+        if (requiredCapabilities === noThrow || (requiredCapabilities && requiredCapabilities[context.method] === noThrow)) return hasLogin ? context : await noThrowAuth(context);
         const adminPass = (options?.adminPass || []).includes(context.method) && (_get(context.params, 'admin_pass') || _get(context.params, [configuration.core_path, 'admin_pass'])) as any
-        if (!loginId) context = (adminPass || options?.specialChange) ? await noThrowAuth(context) : await bareAuth(context);
+        // If no login is present and no client UCAN is provided, perform authentication. Otherwise, reuse existing state/ucan.
+        if (!hasLogin && !existingUcan) context = (adminPass || options?.specialChange) ? await noThrowAuth(context) : await bareAuth(context);
         if (requiredCapabilities === anyAuth && !options?.specialChange) {
             context.params.authenticated = !!context.params[entity];
             return context;
@@ -450,8 +454,14 @@ export const ucanAuth = <S>(requiredCapabilities?: UcanCap, options?: UcanAuthOp
 export const allUcanAuth = <S>(methods: UcanAllArgs, options?: UcanAuthOptions) => {
     return async (context: HookContext<S>): Promise<HookContext<S>> => {
         const config = context.app.get('authentication') as AuthConfig;
-        const entity = _get(context, ['auth', config.entity]);
-        if (entity) context = _set(context, [config.core_path, config.entity], entity)
+        // if a login is already present in params[core_path][entity], don't overwrite it
+        const corePath = (config as any).core_path || 'core';
+        const entityKey = (config as any).entity || 'login';
+        const existingLogin = _get(context.params, [corePath, entityKey]);
+        if (!existingLogin) {
+            const entity = _get(context, ['auth', entityKey]);
+            if (entity) context = _set(context, [corePath, entityKey], entity)
+        }
         if (context.type === 'before') {
             const {method} = context as { method: keyof UcanAllArgs } & HookContext<S>;
             if (methods[method as keyof UcanAllArgs] || methods['all']) {
