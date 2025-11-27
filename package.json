@@ -1,6 +1,6 @@
 {
   "name": "feathers-ucan",
-  "version": "0.1.13",
+  "version": "0.1.14",
   "description": "Ucan extension of feathers jwt auth",
   "source": "src/index.ts",
   "type": "module",
@@ -12,27 +12,27 @@
       "require": "./lib/index.cjs"
     },
     "./auth-service": {
-      "types": "./lib/auth-service.d.ts",
+      "types": "./lib/auth-service/index.d.ts",
       "import": "./lib/auth-service.js",
       "require": "./lib/auth-service.cjs"
     },
     "./core": {
-      "types": "./lib/core.d.ts",
+      "types": "./lib/core/index.d.ts",
       "import": "./lib/core.js",
       "require": "./lib/core.cjs"
     },
     "./hooks": {
-      "types": "./lib/hooks.d.ts",
+      "types": "./lib/hooks/index.d.ts",
       "import": "./lib/hooks.js",
       "require": "./lib/hooks.cjs"
     },
     "./types": {
-      "types": "./lib/types.d.ts",
+      "types": "./lib/types/index.d.ts",
       "import": "./lib/types.js",
       "require": "./lib/types.cjs"
     },
     "./utils": {
-      "types": "./lib/utils.d.ts",
+      "types": "./lib/utils/index.d.ts",
       "import": "./lib/utils.js",
       "require": "./lib/utils.cjs"
     }
