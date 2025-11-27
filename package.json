@@ -1,6 +1,6 @@
 {
   "name": "feathers-ucan",
-  "version": "0.1.19",
+  "version": "0.1.20",
   "description": "Ucan extension of feathers jwt auth",
   "source": "src/index.ts",
   "type": "module",
@@ -44,7 +44,7 @@
   "scripts": {
     "test": "test",
     "prebuild": "rimraf lib dist && node scripts/gen-version.js",
-    "build": "rm -rf lib && microbundle --tsconfig tsconfig.json && node scripts/create-submodule-exports.js",
+    "build": "rm -rf lib && microbundle --tsconfig tsconfig.json --no-compress --target node && node scripts/create-submodule-exports.js",
     "dev": "microbundle --watch --tsconfig tsconfig.json --no-sourcemap",
     "dev:modules": "microbundle src/auth-service.ts src/core.ts src/hooks.ts src/types.ts src/utils.ts --watch --tsconfig tsconfig.json --no-sourcemap --no-pkg-main"
   },
