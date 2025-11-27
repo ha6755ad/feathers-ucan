@@ -140,23 +140,20 @@ duplicateTypeFiles.forEach(filePath => {
   }
 });
 
-// Fix main index.d.ts to use nested paths for proper re-exports
+// Replace main index.d.ts with direct exports that TypeScript can resolve
 const mainIndexDts = 'lib/index.d.ts';
 if (fs.existsSync(mainIndexDts)) {
-  let content = fs.readFileSync(mainIndexDts, 'utf8');
-  const originalContent = content;
+  // Use direct file path exports instead of directory re-exports
+  const bundledContent = `export * from './auth-service/ucan-strategy';
+export * from './core/methods';
+export * from './hooks/ucan-auth';
+export * from './hooks/update-ucan';
+export * from './types/index';
+export * from './utils/check-exists';
+`;
 
-  // Replace flat re-exports with nested ones to match actual directory structure
-  content = content.replace(/export \* from '\.\/auth-service';/g, "export * from './auth-service/index';");
-  content = content.replace(/export \* from '\.\/core';/g, "export * from './core/index';");
-  content = content.replace(/export \* from '\.\/hooks';/g, "export * from './hooks/index';");
-  content = content.replace(/export \* from '\.\/types';/g, "export * from './types/index';");
-  content = content.replace(/export \* from '\.\/utils';/g, "export * from './utils/index';");
-
-  if (content !== originalContent) {
-    fs.writeFileSync(mainIndexDts, content, 'utf8');
-    console.log(`✅ Fixed main index.d.ts re-export paths`);
-  }
+  fs.writeFileSync(mainIndexDts, bundledContent, 'utf8');
+  console.log(`✅ Generated bundled index.d.ts with direct file exports`);
 }
 
 console.log('✅ Cleaned up TypeScript declaration files');
