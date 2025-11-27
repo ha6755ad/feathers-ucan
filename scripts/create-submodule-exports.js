@@ -119,41 +119,50 @@ problematicFiles.forEach(filePath => {
   }
 });
 
-// Fix duplicate AnyObj export by converting import to import type
-const duplicateTypeFiles = [
+// Fix duplicate exports by converting type-only imports to "import type"
+const filesToFixImports = [
+  'lib/auth-service/index.d.ts',
   'lib/core/methods.d.ts',
-  'lib/hooks/ucan-auth.d.ts'
+  'lib/hooks/ucan-auth.d.ts',
+  'lib/utils/check-exists.d.ts'
 ];
 
-duplicateTypeFiles.forEach(filePath => {
+filesToFixImports.forEach(filePath => {
   if (fs.existsSync(filePath)) {
     let content = fs.readFileSync(filePath, 'utf8');
     const originalContent = content;
 
-    // Convert "import { AnyObj" to "import type { AnyObj" to prevent re-export
-    content = content.replace(/^import \{ (AnyObj[^}]*) \} from/gm, 'import type { $1 } from');
+    // Convert imports from ../types to "import type"
+    content = content.replace(/^import \{ ([^}]*) \} from '\.\.\/types';?$/gm, (match, imports) => {
+      return `import type { ${imports} } from '../types';`;
+    });
 
     if (content !== originalContent) {
       fs.writeFileSync(filePath, content, 'utf8');
-      console.log(`✅ Fixed duplicate type exports in ${filePath}`);
+      console.log(`✅ Fixed imports in ${filePath}`);
     }
   }
 });
 
+console.log('✅ Converted type imports to prevent duplicate exports');
+
 // Replace main index.d.ts with direct exports that TypeScript can resolve
 const mainIndexDts = 'lib/index.d.ts';
 if (fs.existsSync(mainIndexDts)) {
-  // Use direct file path exports instead of directory re-exports
-  const bundledContent = `export * from './auth-service/ucan-strategy';
-export * from './core/methods';
-export * from './hooks/ucan-auth';
-export * from './hooks/update-ucan';
-export * from './types/index';
-export * from './utils/check-exists';
-`;
+  // List all actual declaration files to avoid nested re-export resolution issues
+  const filesToExport = [
+    './auth-service/index',
+    './core/methods',
+    './hooks/ucan-auth',
+    './hooks/update-ucan',
+    './types/index',
+    './utils/check-exists'
+  ];
+
+  const bundledContent = filesToExport.map(file => `export * from '${file}';`).join('\n') + '\n';
 
   fs.writeFileSync(mainIndexDts, bundledContent, 'utf8');
-  console.log(`✅ Generated bundled index.d.ts with direct file exports`);
+  console.log(`✅ Generated bundled index.d.ts with all file exports`);
 }
 
 console.log('✅ Cleaned up TypeScript declaration files');
