@@ -432,7 +432,8 @@ export const ucanAuth = <S>(requiredCapabilities?: UcanCap, options?: UcanAuthOp
         const core_path = configuration.core_path || 'core';
         const entity = configuration.entity || 'login';
 
-        const existingLogin:any = _get(context.params, [core_path, entity]) || _get(context.params, 'login') || _get(context.params.connect, entity);
+        const existingLogin:any = _get(context.params, [core_path, entity]) || _get(context.params, 'login') || _get(context.params.connection, entity);
+        if(existingLogin) context.params[entity] = existingLogin;
         const loginId = typeof existingLogin === 'string' ? existingLogin : existingLogin?._id;
         const hasLogin = !!(existingLogin && (typeof existingLogin === 'string' || !!loginId));
         const existingUcan = _get(context.params, configuration.client_ucan || 'client_ucan');
