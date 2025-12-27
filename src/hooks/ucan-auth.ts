@@ -41,7 +41,7 @@ export const noThrow: NoThrow = '$' as NoThrow;
 
 export type CapabilityParts = Partial<Capability> | [string, Array<string> | string];
 
-export declare type LoginPassOption = [Array<string>, Array<string> | '*']
+export declare type LoginPassOption = [Array<string>, Array<string> | '*'] | [Array<string>, Array<string> | '*', Array<string>];
 export declare type UcanAuthOptions = {
     creatorPass?: '*' | Array<string>,
     loginPass?: Array<LoginPassOption>,
@@ -342,8 +342,8 @@ export const checkUcan = (requiredCapabilities: UcanCap, options?: UcanAuthOptio
                             if (existing) {
                                 context = setExists(context, existing);
                                 /**perform the check*/
-                                let recordLoginPassId;
-                                for (const passPath of lpass[0] || []) {
+                                const idArr = Array.isArray(lpass[2]) ? lpass[2] : lpass[0] || [];
+                                for (const passPath of idArr || []) {
                                     const spl = String(passPath).split('/');
                                     if (spl[0].includes('*')) {
                                         const spl2 = spl[0].split('*');
