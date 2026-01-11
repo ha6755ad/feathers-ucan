@@ -143,7 +143,18 @@ type MethodOpts = { aud?: string }
 export const verifyAgainstReqs = <S>(reqs: Array<RequiredCapability>, config: VerifyConfig, options?: UcanAuthOptions) => {
     return async (context: HookContext<S>): Promise<VerifyRes> => {
         const log = options?.log
-        const ucan = _get(context.params, config.client_ucan) as string;
+        const rawUcan = _get(context.params, config.client_ucan) as string;
+        // Normalize the client UCAN the same way the caps path does
+        // This brings the first check up to speed with the working cap_subjects flow.
+        let ucan = rawUcan as unknown as string;
+        try {
+            // ucanToken will stringify a UCAN object or return the compact form for strings
+            const maybe = ucanToken(rawUcan as any);
+            if (maybe && typeof maybe === 'string') ucan = maybe;
+            if (log && rawUcan !== ucan) console.log('Normalized client UCAN via ucanToken()');
+        } catch (e: any) {
+            if (log) console.log('UCAN normalization skipped (ucanToken threw):', e?.message);
+        }
         const audience = options?.audience || _get(context.params, config.ucan_aud) as string;
         if (log) console.log('verify against reqs', reqs)
         let vMethod: (uc?: string, methodOpts?: MethodOpts) => Promise<VerifyRes>

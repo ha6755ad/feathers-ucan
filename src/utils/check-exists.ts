@@ -11,10 +11,10 @@ export const getExists = (context:Partial<HookContext>):any => {
     return _get(context.params, `core.${path}.${context.path}.${context.id}`) || undefined;
 }
 
-export const loadExists = async (context:HookContext, options?:{ skipJoins?: boolean, params?: AnyObj }):Promise<any> => {
+export const loadExists = async (context:HookContext, options?:{ skipJoins?: boolean, params?: AnyObj, skip_hooks?:any }):Promise<any> => {
     let ex = getExists(context);
     if(!ex && context.id) {
-        ex = await new CoreCall(context.path, context, { skipJoins: options?.skipJoins !== false }).get(context.id, { exists_check: true, admin_pass: true, skip_hooks: true, ...options?.params || {} })
+        ex = await new CoreCall(context.path, context, { skipJoins: options?.skipJoins !== false }).get(context.id, { exists_check: true, admin_pass: true, skip_hooks: !!options?.skip_hooks, ...options?.params || {} })
     }
     return ex;
 }
