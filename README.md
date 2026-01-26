@@ -8,7 +8,7 @@
 
 An extension of jwt authentication in feathersjs to include the added functionality of UCAN `@ucans/ucans` tokens. More specifically, adding capabilities.
 
-UCAN tokens are unopinionated in general, and still emerging. There is a lot more that possibly could be done with this concept, we have built only what we have managed to use in my own current scope of project needs with this library. We have tried to leav it as unopinionated as possible. 
+UCAN tokens are unopinionated in general, and still emerging. There is a lot more that possibly could be done with this concept, we have built only what we have managed to use in my own current scope of project needs with this library. We have tried to leav it as unopinionated as possible!
 
 
 # UCAN auth-strategy
