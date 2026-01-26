@@ -53,7 +53,7 @@ export declare type UcanAuthOptions = {
     specialChange?: Array<string> | AnyAuth,
     cap_subjects?: Array<string>,
     audience?: string,
-    special_params?:Record<string,any>
+    special_params?:Record<string,any> //Pass any params
 }
 type RequiredCapability = { capability: Capability, rootIssuer: string }
 export type UcanCap = Array<CapabilityParts> | AnyAuth | NoThrow;
