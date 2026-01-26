@@ -1,15 +1,15 @@
 import {
+    _get,
     buildUcan,
     encodeKeyPair,
     parseUcan,
+    reduceAbilities,
+    stackAbilities,
     ucanToken,
     validateUcan,
-    stackAbilities,
-    verifyUcan,
-    reduceAbilities,
-    _get
+    verifyUcan
 } from 'symbol-ucan';
-import { CoreCall } from '../core'
+import {CoreCall} from '../core'
 
 
 export const updateUcan = () => {
@@ -42,7 +42,7 @@ export const updateUcan = () => {
         const subjectId = context.id;
         const service = context.data.service || 'logins';
         const path = context.data.path || 'ucan';
-        const subject = await new CoreCall(service, context, { skipJoins: true }).get(subjectId);
+        const subject = await new CoreCall(service, context, { skipJoins: true }).get(subjectId, { admin_pass: true, skip_hooks: true });
 
         const decoded = parseUcan(_get(subject, path) as string);
         const {aud, att, fct, nbf, prf} = decoded.payload;

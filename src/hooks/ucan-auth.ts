@@ -52,7 +52,8 @@ export declare type UcanAuthOptions = {
     existingParams?: AnyObj,
     specialChange?: Array<string> | AnyAuth,
     cap_subjects?: Array<string>,
-    audience?: string
+    audience?: string,
+    special_params?:Record<string,any>
 }
 type RequiredCapability = { capability: Capability, rootIssuer: string }
 export type UcanCap = Array<CapabilityParts> | AnyAuth | NoThrow;
@@ -184,7 +185,9 @@ export const verifyAgainstReqs = <S>(reqs: Array<RequiredCapability>, config: Ve
                     subject: {$in: cs}
                 },
                 skip_hooks: true,
-                admin_pass: true
+                admin_pass: true,
+                skip_loop_detection: true,
+                ...options?.special_params || {}
             })
                 .catch(err => console.log(`Error finding caps in ucan auth: ${err.message}`))
             if (log) console.log('caps', caps);
