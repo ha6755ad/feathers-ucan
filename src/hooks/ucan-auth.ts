@@ -181,17 +181,23 @@ type MethodOpts = { aud?: string }
 export const verifyAgainstReqs = <S>(reqs: Array<RequiredCapability>, config: VerifyConfig, options?: UcanAuthOptions) => {
     return async (context: HookContext<S>): Promise<VerifyRes> => {
         const log = options?.log
-        const rawUcan = _get(context.params, config.client_ucan) as string;
+        // Per latest requirement: UCAN is always at context.params[entityKey].ucan
+        const authCfg = context.app.get('authentication') as AnyObj;
+        const entityKey = authCfg?.entity || 'login';
+        if (log) console.log('get initial ucan', context.params[entityKey]?.ucan)
+        const rawUcan = _get(context.params, [entityKey, 'ucan']) as string;
         // Normalize the client UCAN the same way the caps path does
         // This brings the first check up to speed with the working cap_subjects flow.
         let ucan = rawUcan as unknown as string;
-        try {
-            // ucanToken will stringify a UCAN object or return the compact form for strings
-            const maybe = ucanToken(rawUcan as any);
-            if (maybe && typeof maybe === 'string') ucan = maybe;
-            if (log && rawUcan !== ucan) console.log('Normalized client UCAN via ucanToken()');
-        } catch (e: any) {
-            if (log) console.log('UCAN normalization skipped (ucanToken threw):', e?.message);
+        if (rawUcan) {
+            try {
+                // ucanToken will stringify a UCAN object or return the compact form for strings
+                const maybe = ucanToken(rawUcan as any);
+                if (maybe && typeof maybe === 'string') ucan = maybe;
+                if (log && rawUcan !== ucan) console.log('Normalized client UCAN via ucanToken()');
+            } catch (e: any) {
+                if (log) console.log('UCAN normalization skipped (ucanToken threw):', e?.message);
+            }
         }
         const audience = options?.audience || _get(context.params, config.ucan_aud) as string;
         if (log) console.log('verify against reqs', reqs)
@@ -491,7 +497,8 @@ export const ucanAuth = <S>(requiredCapabilities?: UcanCap, options?: UcanAuthOp
         if (existingLogin?._id) context.params[entity] = existingLogin;
         const loginId = typeof existingLogin === 'string' ? existingLogin : existingLogin?._id;
         const hasLogin = !!(existingLogin && (typeof existingLogin === 'string' || !!loginId));
-        const existingUcan = _get(context.params, configuration.client_ucan || 'client_ucan');
+        // Per requirement: UCAN is always at context.params[entity].ucan
+        const existingUcan = _get(context.params, [entity, 'ucan']);
         if (options?.log) console.log('ucan auth', 'hasLogin', hasLogin, 'loginId', loginId, 'existingUcan', !!existingUcan, 'core_path', core_path, 'entity', entity, 'core', context.params[core_path], 'params login', context.params.login, 'required capabilities', requiredCapabilities);
         //Below for passing through auth with no required capabilities
         if (requiredCapabilities === noThrow || (requiredCapabilities && requiredCapabilities[context.method] === noThrow)) return hasLogin ? context : await noThrowAuth(context);
