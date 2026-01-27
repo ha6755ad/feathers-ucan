@@ -1,16 +1,6 @@
 import {HookContext} from '../types';
 import {authenticate} from '@feathersjs/authentication';
-import {
-    _get,
-    _set,
-    Capability,
-    encodeKeyPair,
-    genCapability,
-    parseUcan,
-    ucanToken,
-    VerifyOptions,
-    verifyUcan
-} from 'symbol-ucan';
+import {_get, _set, Capability, encodeKeyPair, genCapability, parseUcan, ucanToken, VerifyOptions, verifyUcan} from 'symbol-ucan';
 import {NotAuthenticated} from '@feathersjs/errors';
 import {loadExists, setExists} from '../utils';
 import {CoreCall} from '../core';
@@ -502,8 +492,14 @@ export const handleAuthError = (err: any) => {
                 ? authErrors[0]
                 : err?.message || String(err) || 'authentication failed'
 
+        const settings = {
+            ucan: {
+                reason: message?.toLowerCase().includes('expired') ? 'expired' : message
+            }
+        }
+
         console.warn(`Authentication error on ${context.path}: ${message}`)
 
-        throw new NotAuthenticated(message)
+        throw new NotAuthenticated(message, settings)
     }
 }
