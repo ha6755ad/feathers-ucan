@@ -1,6 +1,16 @@
 import {HookContext} from '../types';
 import {authenticate} from '@feathersjs/authentication';
-import {_get, _set, Capability, encodeKeyPair, genCapability, parseUcan, ucanToken, VerifyOptions, verifyUcan} from 'symbol-ucan';
+import {
+    _get,
+    _set,
+    Capability,
+    encodeKeyPair,
+    genCapability,
+    parseUcan,
+    ucanToken,
+    VerifyOptions,
+    verifyUcan
+} from 'symbol-ucan';
 import {NotAuthenticated} from '@feathersjs/errors';
 import {loadExists, setExists} from '../utils';
 import {CoreCall} from '../core';
@@ -92,14 +102,44 @@ export const bareAuth = async <S>(context: HookContext<S>): Promise<HookContext<
 
 const verifyOne = async (ucan: string, options: VerifyOptions, log?: boolean) => {
     try {
-        let v = await verifyUcan(ucan, options);
+        // Normalize UCAN input and guard against missing tokens
+        let normalizedUcan: string | undefined = ucan as any;
+        if (!normalizedUcan) {
+            try {
+                // ucanToken can stringify object-form UCANs; may throw if invalid
+                normalizedUcan = ucanToken(ucan as any) as any;
+            } catch (e) {
+                normalizedUcan = undefined;
+            }
+        }
+        if (!normalizedUcan || typeof normalizedUcan !== 'string' || normalizedUcan.trim() === '') {
+            return {ok: false, err: ['Missing or invalid UCAN token']};
+        }
+
+        let v = await verifyUcan(normalizedUcan, options);
         if (!v?.ok && options.requiredCapabilities) {
-            const newCapabilities = options.requiredCapabilities.map(a => {
-                if (a.capability.can !== SUPERUSER) a.capability.can.segments = ['*']
-                return a
+            // Retry by widening segments to '*' for non-superuser namespaces, without mutating original reqs
+            const newCapabilities = options.requiredCapabilities.map(rc => {
+                const cloned = {
+                    ...rc,
+                    capability: {
+                        ...rc.capability,
+                        can: rc.capability.can === SUPERUSER ? SUPERUSER : {
+                            ...rc.capability.can
+                        }
+                    }
+                } as typeof rc;
+                if ((cloned.capability as any)?.can?.namespace !== SUPERUSER) {
+                    (cloned.capability as any).can.segments = ['*'];
+                }
+                return cloned;
             })
-            if (log) console.log('set new req capabilities', newCapabilities, parseUcan(ucan))
-            v = await verifyUcan(ucan, {
+            if (log) {
+                let parsed: any = undefined;
+                try { parsed = parseUcan(normalizedUcan); } catch {}
+                console.log('set new req capabilities', newCapabilities, parsed)
+            }
+            v = await verifyUcan(normalizedUcan, {
                 ...options, requiredCapabilities: newCapabilities
             })
             if (log) console.log('Second verification result:', v);
@@ -114,7 +154,11 @@ export const orVerifyLoop = async (arr: Array<VerifyOne>, log?: boolean): Promis
 
     try {
         for (const i in arr) {
-            if (log) console.log('or verify loop', arr[i], parseUcan(arr[i].ucan));
+            if (log) {
+                let parsed: any = undefined;
+                try { if (typeof arr[i].ucan === 'string') parsed = parseUcan(arr[i].ucan); } catch {}
+                console.log('or verify loop', arr[i], parsed);
+            }
             if (!v?.ok) {
                 const {ucan, ...options} = arr[i];
                 v = await verifyOne(ucan, options, log)
@@ -492,9 +536,10 @@ export const handleAuthError = (err: any) => {
                 ? authErrors[0]
                 : err?.message || String(err) || 'authentication failed'
 
+        const m = message?.toLowerCase() || ''
         const settings = {
             ucan: {
-                reason: message?.toLowerCase().includes('expired') ? 'expired' : message
+                reason: m.includes('expired') ? 'expired' : message
             }
         }
 
