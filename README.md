@@ -119,6 +119,8 @@ const methods = {
 
 There is a flag at `context.params.canU` set on all successful UCAN validations or exceptions (true if UCAN was validated or exceptions were met). On noThrow scenarios, context will be returned, but no `canU` flag will be set to true.
 
+The ucan valicatio result is stored for referencing details of the actual ucan validation at `context.params.ucan_auth_result`.
+
 Note: the way ucans works, you cannot simply provide a “greatest ability” and have the verify method filter out lesser abilities. In other words, if you have `WRITE` segment, you’d expect that to be valid for a `READ` requirement. However, ucans is less opinionated than that. You need to reduce the ability yourself, or it will not verify even if you have a greater ability. We have greatest ability functions, but currently the `allUcanAuth` method does not use it. Add only the greatest ability you wish to enforce. The UI we use for adding ucans to users does this already, so only custom scenarios should present a problem at this time. In the future, we will always reduce abilities for the greatest ability.
 
 ## Options

@@ -172,6 +172,7 @@ export const verifyAgainstReqs = <S>(reqs: Array<RequiredCapability>, config: Ve
             requiredCapabilities: reqs
         }, log) as Promise<VerifyRes>
         let v = await vMethod()
+        context.params.ucan_auth_result = v;
         if (log) console.log('first verify try', v);
         if (v?.ok) return v;
         const cs = (options?.cap_subjects || []).filter(a => !!a)
@@ -427,10 +428,13 @@ export const checkUcan = (requiredCapabilities: UcanCap, options?: UcanAuthOptio
                     if (options?.log) console.error('Ucan capabilities requirements not met: ', v, context.type, context.path);
                     if (!options?.noThrow) throw new Error('Missing proper capabilities for this action: ' + context.type + ': ' + context.path + ' - ' + context.method);
                     else {
+                        // Preserve verification details on the context so callers can inspect why UCAN failed
+                        // (e.g., expired token) when using the noThrow option.
                         context.params._no_throw_error = {
                             type: context.type,
                             method: context.method,
-                            path: context.path
+                            path: context.path,
+                            verify: v // includes v.ok, v.err, and any details from verifyUcan
                         }
                         return context;
                     }
