@@ -1,6 +1,6 @@
 {
   "name": "feathers-ucan",
-  "version": "0.1.29",
+  "version": "0.1.30",
   "description": "Ucan extension of feathers jwt auth",
   "source": "src/index.ts",
   "type": "module",
@@ -72,6 +72,7 @@
   },
   "dependencies": {
     "@feathersjs/authentication": "^5.0.11",
+    "@feathersjs/errors": "^5.0.37",
     "@ucans/ucans": "^0.12.0",
     "long-timeout": "^0.1.1",
     "radash": "^11.0.0",

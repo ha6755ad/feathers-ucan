@@ -11,6 +11,7 @@ import {
     VerifyOptions,
     verifyUcan
 } from 'symbol-ucan';
+import {NotAuthenticated} from '@feathersjs/errors';
 import {loadExists, setExists} from '../utils';
 import {CoreCall} from '../core';
 
@@ -41,7 +42,9 @@ export const noThrow: NoThrow = '$' as NoThrow;
 
 export type CapabilityParts = Partial<Capability> | [string, Array<string> | string];
 
-export declare type LoginPassOption = [Array<string>, Array<string> | '*'] | [Array<string>, Array<string> | '*', Array<string>];
+export declare type LoginPassOption =
+    [Array<string>, Array<string> | '*']
+    | [Array<string>, Array<string> | '*', Array<string>];
 export declare type UcanAuthOptions = {
     creatorPass?: '*' | Array<string>,
     loginPass?: Array<LoginPassOption>,
@@ -52,7 +55,7 @@ export declare type UcanAuthOptions = {
     existingParams?: AnyObj,
     specialChange?: Array<string> | AnyAuth,
     cap_subjects?: Array<string>,
-    special_params?:Record<string,any>, //Pass any params
+    special_params?: Record<string, any>, //Pass any params
     audience?: string
 }
 type RequiredCapability = { capability: Capability, rootIssuer: string }
@@ -450,8 +453,8 @@ export const ucanAuth = <S>(requiredCapabilities?: UcanCap, options?: UcanAuthOp
         const core_path = configuration.core_path || 'core';
         const entity = configuration.entity || 'login';
 
-        const existingLogin:any = _get(context.params, [core_path, entity]) || _get(context.params, 'login') || _get(context.params.connection, entity);
-        if(existingLogin?._id) context.params[entity] = existingLogin;
+        const existingLogin: any = _get(context.params, [core_path, entity]) || _get(context.params, 'login') || _get(context.params.connection, entity);
+        if (existingLogin?._id) context.params[entity] = existingLogin;
         const loginId = typeof existingLogin === 'string' ? existingLogin : existingLogin?._id;
         const hasLogin = !!(existingLogin && (typeof existingLogin === 'string' || !!loginId));
         const existingUcan = _get(context.params, configuration.client_ucan || 'client_ucan');
@@ -488,5 +491,19 @@ export const allUcanAuth = <S>(methods: UcanAllArgs, options?: UcanAuthOptions) 
                 return await ucanAuth(methods[method] || methods['all'], options)(context) as any;
             } else return context;
         } else return context;
+    }
+}
+
+export const handleAuthError = (err: any) => {
+    return (context: HookContext) => {
+        const authErrors = context.params?.ucan_auth_result?.err
+        const message =
+            Array.isArray(authErrors) && authErrors[0]
+                ? authErrors[0]
+                : err?.message || String(err) || 'authentication failed'
+
+        console.warn(`Authentication error on ${context.path}: ${message}`)
+
+        throw new NotAuthenticated(message)
     }
 }
