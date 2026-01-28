@@ -163,8 +163,17 @@ export class UcanStrategy extends AuthenticationBaseStrategy {
                 } catch {}
             }
             const entities = await this.app?.service(service).find({...pms, skipJoins: true, skip_hooks: true, admin_pass: true} as any);
-            if (entities.total) return entities.data[0]._id;
-            else throw new NotAuthError('Could not find login associated with this ucan');
+            // Support both paginated and non-paginated service responses
+            // - Paginated: { total, limit, skip, data: [...] }
+            // - Non-paginated: Array
+            let first: any = undefined;
+            if (entities && typeof entities === 'object' && 'data' in entities) {
+                first = (entities as any).data?.[0];
+            } else if (Array.isArray(entities)) {
+                first = entities[0];
+            }
+            if (first && first._id) return first._id;
+            throw new NotAuthError('Could not find login associated with this ucan');
         }
     }
 

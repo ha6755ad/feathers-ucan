@@ -84,7 +84,7 @@ export const noThrowAuth = async <S>(context: HookContext<S>): Promise<HookConte
         context = _set(context, [config.core_path, config.entity], entity)
     }
     try {
-        context = await authenticate('jwt')(context as any)
+        context = await authenticate()(context as any)
             .catch(() => {
                 return context;
             })
@@ -98,7 +98,7 @@ export const bareAuth = async <S>(context: HookContext<S>): Promise<HookContext<
     const config = context.app.get('authentication') as AuthConfig;
     const entity = _get(context, ['auth', config.entity]);
     if (entity) context = _set(context, [config.core_path, config.entity], entity)
-    return authenticate('jwt')(context as any);
+    return authenticate()(context as any);
 }
 
 const verifyOne = async (ucan: string, options: VerifyOptions, log?: boolean) => {
