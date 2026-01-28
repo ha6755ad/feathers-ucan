@@ -42,6 +42,8 @@ export class UcanStrategy extends AuthenticationBaseStrategy {
             service: authConfig.service,
             entity: authConfig.entity,
             entityId: authConfig.entityId,
+            // propagate core_path so hooks/strategies can share the same namespace
+            core_path: (this.authentication?.configuration as any)?.core_path || (authConfig as any)?.core_path,
             header: 'Authorization',
             schemes: ['Bearer', 'JWT'],
             ...config
@@ -227,10 +229,22 @@ export class UcanStrategy extends AuthenticationBaseStrategy {
         let value;
         const coreEntity = _get(params, [core_path, entity]);
         if (!coreEntity) {
+            // Determine which field to query by (configurable) and which audience to use
+            const idField = (this.configuration as any)?.entityId || 'did';
+            const audience = _get(params, [core_path, 'ucan_aud']) || decodedUcan?.payload?.aud;
+            if (params?.log) {
+                try {
+                    console.log('[UCAN DIAG] strategy:entity-lookup', {
+                        idField,
+                        audience,
+                        usedCoreAud: !!_get(params, [core_path, 'ucan_aud'])
+                    });
+                } catch {}
+            }
             const entityId = await this.getEntityId(result, {
                 ...params,
                 loginId,
-                query: {did: decodedUcan?.payload.aud}
+                query: {[idField]: audience}
             });
             value = await this.getEntity(entityId, params);
         } else value = coreEntity;
