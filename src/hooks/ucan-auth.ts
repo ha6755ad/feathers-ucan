@@ -184,7 +184,7 @@ export const verifyAgainstReqs = <S>(reqs: Array<RequiredCapability>, config: Ve
         // Per latest requirement: UCAN is always at context.params[entityKey].ucan
         const authCfg = context.app.get('authentication') as AnyObj;
         const entityKey = authCfg?.entity || 'login';
-        if (log) console.log('get initial ucan', context.params[entityKey]?.ucan)
+        if (log) console.log('get initial ucan', context.params[entityKey])
         const rawUcan = _get(context.params, [entityKey, 'ucan']) as string;
         // Normalize the client UCAN the same way the caps path does
         // This brings the first check up to speed with the working cap_subjects flow.
@@ -494,7 +494,12 @@ export const ucanAuth = <S>(requiredCapabilities?: UcanCap, options?: UcanAuthOp
         const entity = configuration.entity || 'login';
 
         const existingLogin: any = _get(context.params, [core_path, entity]) || _get(context.params, 'login') || _get(context.params.connection, entity);
-        if (existingLogin?._id) context.params[entity] = existingLogin;
+        // Ensure params[entity] is always an object with _id when a login identifier exists
+        if (existingLogin) {
+            context.params[entity] = typeof existingLogin === 'string'
+                ? { _id: existingLogin }
+                : existingLogin;
+        }
         const loginId = typeof existingLogin === 'string' ? existingLogin : existingLogin?._id;
         const hasLogin = !!(existingLogin && (typeof existingLogin === 'string' || !!loginId));
         // Per requirement: UCAN is always at context.params[entity].ucan

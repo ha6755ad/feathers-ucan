@@ -157,8 +157,15 @@ export class UcanStrategy extends AuthenticationBaseStrategy {
         if (!accessToken) {
 
             if (ucan) accessToken = ucanToken(ucan);
-            else throw new NotAuthError('Error generating ucan');
+            else throw new NotAuthError('Missing UCAN access token');
             // } else throw new NotAuthenticated('No access token');
+        }
+
+        // Guard: prevent passing null/invalid tokens to validateUcan
+        const tokenStr = String(accessToken || '').trim();
+        const dotCount = (tokenStr.match(/\./g) || []).length;
+        if (!tokenStr || tokenStr === 'null' || tokenStr === 'undefined' || dotCount !== 2) {
+            throw new NotAuthError('Invalid or missing UCAN in Authorization header or request payload');
         }
         //
         // await verifyUcan(accessToken, {audience: ucan_audience || params.ucan_aud, requiredCapabilities})
@@ -227,9 +234,15 @@ export class UcanStrategy extends AuthenticationBaseStrategy {
             return null;
         }
 
+        const raw = hasScheme ? schemeValue : (headerValue as string);
+        const token = typeof raw === 'string' ? raw.trim() : raw;
+        // If clients accidentally send "Bearer null"/"Bearer undefined" or empty, ignore this strategy
+        if (!token || token === 'null' || token === 'undefined') {
+            return null;
+        }
         return {
             strategy: this.name,
-            accessToken: hasScheme ? schemeValue : headerValue
+            accessToken: token
         };
     }
 }
