@@ -501,9 +501,9 @@ export const ucanAuth = <S>(requiredCapabilities?: UcanCap, options?: UcanAuthOp
         // Diagnostics: show how/where we try to source the login when options.log is enabled
         if (options?.log) {
             try {
-                const src1 = _get(context.params, [core_path, entity]);
-                const src2 = _get(context.params, 'login');
-                const src3 = _get(context.params, ['connection', entity]);
+                const src1:any = _get(context.params, [core_path, entity]);
+                const src2:any = _get(context.params, 'login');
+                const src3:any = _get(context.params, ['connection', entity]);
                 const authHeaderToken = _get(context.params, ['headers', 'authorization']);
                 console.log('[UCAN DIAG] ucanAuth:login-sourcing', {
                     entityKey: entity,
