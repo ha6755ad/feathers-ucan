@@ -546,7 +546,7 @@ export const ucanAuth = <S>(requiredCapabilities?: UcanCap, options?: UcanAuthOp
         if (!hasLogin && !existingUcan) context = (adminPass || options?.specialChange) ? await noThrowAuth(context) : await bareAuth(context);
         if (options?.log && !hasLogin) {
             // Log again after attempting auth to see if strategy populated the login
-            const postLogin = _get(context.params, [core_path, entity]) || _get(context.params, 'login') || _get(context.params.connection, entity);
+            const postLogin:any = _get(context.params, [core_path, entity]) || _get(context.params, 'login') || _get(context.params.connection, entity);
             const postId = typeof postLogin === 'string' ? postLogin : postLogin?._id;
             console.log('[UCAN DIAG] ucanAuth:post-auth', { hasLogin: !!postLogin, postId, entityKey: entity });
         }
