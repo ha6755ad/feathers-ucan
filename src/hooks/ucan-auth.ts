@@ -543,7 +543,13 @@ export const ucanAuth = <S>(requiredCapabilities?: UcanCap, options?: UcanAuthOp
         if (requiredCapabilities === noThrow || (requiredCapabilities && requiredCapabilities[context.method] === noThrow)) return hasLogin ? context : await noThrowAuth(context);
         const adminPass = (options?.adminPass || []).includes(context.method) && (_get(context.params, 'admin_pass') || _get(context.params, [configuration.core_path, 'admin_pass'])) as any
         // If no login is present and no client UCAN is provided, perform authentication. Otherwise, reuse existing state/ucan.
-        if (!hasLogin && !existingUcan) context = (adminPass || options?.specialChange) ? await noThrowAuth(context) : await bareAuth(context);
+        // Pass through a lightweight log flag so the strategy can emit diagnostics when enabled
+        if (!hasLogin && !existingUcan) {
+            if (options?.log) {
+                try { (context as any).params = {...(context as any).params, log: true}; } catch {}
+            }
+            context = (adminPass || options?.specialChange) ? await noThrowAuth(context) : await bareAuth(context);
+        }
         if (options?.log && !hasLogin) {
             // Log again after attempting auth to see if strategy populated the login
             const postLogin:any = _get(context.params, [core_path, entity]) || _get(context.params, 'login') || _get(context.params.connection, entity);

@@ -145,6 +145,18 @@ export class UcanStrategy extends AuthenticationBaseStrategy {
                 query: {...query, $limit: 1},
                 [core_path]: {skipJoins: true, ..._params[core_path]}
             }
+            // Diagnostics to help understand why a login may not be found
+            if (_params?.log) {
+                try {
+                    console.log('[UCAN DIAG] strategy:getEntityId', {
+                        service,
+                        core_path,
+                        query: pms.query,
+                        provider: _params.provider,
+                        paramsKeys: Object.keys(_params || {}).slice(0, 20)
+                    });
+                } catch {}
+            }
             const entities = await this.app?.service(service).find({...pms, skipJoins: true, skip_hooks: true, admin_pass: true} as any);
             if (entities.total) return entities.data[0]._id;
             else throw new NotAuthError('Could not find login associated with this ucan');
@@ -187,6 +199,18 @@ export class UcanStrategy extends AuthenticationBaseStrategy {
                 }
                 throw new Error(errObj.message);
             });
+
+        if (params?.log) {
+            try {
+                console.log('[UCAN DIAG] strategy:authenticate', {
+                    entity,
+                    core_path,
+                    aud: decodedUcan?.payload?.aud,
+                    hasParamsEntity: !!_get(params, [core_path, entity]),
+                    provider: params.provider
+                });
+            } catch {}
+        }
 
         const result = {
             accessToken,
