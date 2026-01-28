@@ -11,6 +11,7 @@ import {
     VerifyOptions,
     verifyUcan
 } from 'symbol-ucan';
+import {logUcanParams} from '../utils/log-ucan-params';
 import {NotAuthenticated} from '@feathersjs/errors';
 import {loadExists, setExists} from '../utils';
 import {CoreCall} from '../core';
@@ -184,17 +185,21 @@ export const verifyAgainstReqs = <S>(reqs: Array<RequiredCapability>, config: Ve
         // Per latest requirement: UCAN is always at context.params[entityKey].ucan
         const authCfg = context.app.get('authentication') as AnyObj;
         const entityKey = authCfg?.entity || 'login';
-        if (log) console.log('get initial ucan', context.params[entityKey])
-        const rawUcan = _get(context.params, [entityKey, 'ucan']) as string;
+        if (log) {
+            try { logUcanParams('verifyAgainstReqs:start', context); } catch {}
+        }
+        const rawUcanPrimary = _get(context.params, [entityKey, 'ucan']) as string;
+        // Fallback: legacy path if primary missing
+        const rawUcanFallback = rawUcanPrimary || _get(context.params, config?.client_ucan as any) as string;
         // Normalize the client UCAN the same way the caps path does
         // This brings the first check up to speed with the working cap_subjects flow.
-        let ucan = rawUcan as unknown as string;
-        if (rawUcan) {
+        let ucan = rawUcanFallback as unknown as string;
+        if (rawUcanFallback) {
             try {
                 // ucanToken will stringify a UCAN object or return the compact form for strings
-                const maybe = ucanToken(rawUcan as any);
+                const maybe = ucanToken(rawUcanFallback as any);
                 if (maybe && typeof maybe === 'string') ucan = maybe;
-                if (log && rawUcan !== ucan) console.log('Normalized client UCAN via ucanToken()');
+                if (log && rawUcanFallback !== ucan) console.log('Normalized client UCAN via ucanToken()');
             } catch (e: any) {
                 if (log) console.log('UCAN normalization skipped (ucanToken threw):', e?.message);
             }
