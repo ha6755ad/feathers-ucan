@@ -96,7 +96,10 @@ export class UcanStrategy extends AuthenticationBaseStrategy {
     }
 
     verifyConfiguration() {
-        const allowedKeys = ['entity', 'entityId', 'service', 'header', 'schemes', 'audience'];
+        // Allow strategy configuration keys that this package supports. We recently
+        // started propagating `core_path` from the app's authentication config, so
+        // it must be considered valid here to avoid startup errors.
+        const allowedKeys = ['entity', 'entityId', 'service', 'header', 'schemes', 'audience', 'core_path'];
 
         for (const key of Object.keys(this.configuration)) {
             if (!allowedKeys.includes(key)) {
