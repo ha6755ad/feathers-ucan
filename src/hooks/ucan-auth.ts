@@ -498,6 +498,32 @@ export const ucanAuth = <S>(requiredCapabilities?: UcanCap, options?: UcanAuthOp
         const core_path = configuration.core_path || 'core';
         const entity = configuration.entity || 'login';
 
+        // Diagnostics: show how/where we try to source the login when options.log is enabled
+        if (options?.log) {
+            try {
+                const src1 = _get(context.params, [core_path, entity]);
+                const src2 = _get(context.params, 'login');
+                const src3 = _get(context.params, ['connection', entity]);
+                const authHeaderToken = _get(context.params, ['headers', 'authorization']);
+                console.log('[UCAN DIAG] ucanAuth:login-sourcing', {
+                    entityKey: entity,
+                    corePath: core_path,
+                    // preview the three candidate sources
+                    src1Type: src1 ? (src1.constructor?.name || typeof src1) : typeof src1,
+                    src1HasId: !!(src1 && (src1._id || src1.id)),
+                    src2Type: src2 ? (src2.constructor?.name || typeof src2) : typeof src2,
+                    src2HasId: !!(src2 && (src2._id || src2.id)),
+                    src3Type: src3 ? (src3.constructor?.name || typeof src3) : typeof src3,
+                    src3HasId: !!(src3 && (src3._id || src3.id)),
+                    paramsKeys: Object.keys(context.params || {}).slice(0, 20),
+                    provider: (context as any).params?.provider,
+                    path: (context as any).path,
+                    method: (context as any).method,
+                    hasAuthHeader: typeof authHeaderToken === 'string' && authHeaderToken.length > 0
+                });
+            } catch {}
+        }
+
         const existingLogin: any = _get(context.params, [core_path, entity]) || _get(context.params, 'login') || _get(context.params.connection, entity);
         // Ensure params[entity] is always an object with _id when a login identifier exists
         if (existingLogin) {
@@ -510,11 +536,20 @@ export const ucanAuth = <S>(requiredCapabilities?: UcanCap, options?: UcanAuthOp
         // Per requirement: UCAN is always at context.params[entity].ucan
         const existingUcan = _get(context.params, [entity, 'ucan']);
         if (options?.log) console.log('ucan auth', 'hasLogin', hasLogin, 'loginId', loginId, 'existingUcan', !!existingUcan, 'core_path', core_path, 'entity', entity, 'core', context.params[core_path], 'params login', context.params.login, 'required capabilities', requiredCapabilities);
+        if (options?.log && !hasLogin) {
+            try { logUcanParams('ucanAuth:pre-auth', context); } catch {}
+        }
         //Below for passing through auth with no required capabilities
         if (requiredCapabilities === noThrow || (requiredCapabilities && requiredCapabilities[context.method] === noThrow)) return hasLogin ? context : await noThrowAuth(context);
         const adminPass = (options?.adminPass || []).includes(context.method) && (_get(context.params, 'admin_pass') || _get(context.params, [configuration.core_path, 'admin_pass'])) as any
         // If no login is present and no client UCAN is provided, perform authentication. Otherwise, reuse existing state/ucan.
         if (!hasLogin && !existingUcan) context = (adminPass || options?.specialChange) ? await noThrowAuth(context) : await bareAuth(context);
+        if (options?.log && !hasLogin) {
+            // Log again after attempting auth to see if strategy populated the login
+            const postLogin = _get(context.params, [core_path, entity]) || _get(context.params, 'login') || _get(context.params.connection, entity);
+            const postId = typeof postLogin === 'string' ? postLogin : postLogin?._id;
+            console.log('[UCAN DIAG] ucanAuth:post-auth', { hasLogin: !!postLogin, postId, entityKey: entity });
+        }
         if (requiredCapabilities === anyAuth && !options?.specialChange) {
             context.params.authenticated = !!context.params[entity];
             return context;
