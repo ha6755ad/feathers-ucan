@@ -84,7 +84,8 @@ export const noThrowAuth = async <S>(context: HookContext<S>): Promise<HookConte
         context = _set(context, [config.core_path, config.entity], entity)
     }
     try {
-        context = await authenticate()(context as any)
+        // Must pass explicit strategy per app requirements
+        context = await authenticate('jwt')(context as any)
             .catch(() => {
                 return context;
             })
@@ -98,7 +99,8 @@ export const bareAuth = async <S>(context: HookContext<S>): Promise<HookContext<
     const config = context.app.get('authentication') as AuthConfig;
     const entity = _get(context, ['auth', config.entity]);
     if (entity) context = _set(context, [config.core_path, config.entity], entity)
-    return authenticate()(context as any);
+    // Must pass explicit strategy per app requirements
+    return authenticate('jwt')(context as any);
 }
 
 const verifyOne = async (ucan: string, options: VerifyOptions, log?: boolean) => {
@@ -137,7 +139,10 @@ const verifyOne = async (ucan: string, options: VerifyOptions, log?: boolean) =>
             })
             if (log) {
                 let parsed: any = undefined;
-                try { parsed = parseUcan(normalizedUcan); } catch {}
+                try {
+                    parsed = parseUcan(normalizedUcan);
+                } catch {
+                }
                 console.log('set new req capabilities', newCapabilities, parsed)
             }
             v = await verifyUcan(normalizedUcan, {
@@ -157,7 +162,10 @@ export const orVerifyLoop = async (arr: Array<VerifyOne>, log?: boolean): Promis
         for (const i in arr) {
             if (log) {
                 let parsed: any = undefined;
-                try { if (typeof arr[i].ucan === 'string') parsed = parseUcan(arr[i].ucan); } catch {}
+                try {
+                    if (typeof arr[i].ucan === 'string') parsed = parseUcan(arr[i].ucan);
+                } catch {
+                }
                 console.log('or verify loop', arr[i], parsed);
             }
             if (!v?.ok) {
@@ -182,28 +190,23 @@ type MethodOpts = { aud?: string }
 export const verifyAgainstReqs = <S>(reqs: Array<RequiredCapability>, config: VerifyConfig, options?: UcanAuthOptions) => {
     return async (context: HookContext<S>): Promise<VerifyRes> => {
         const log = options?.log
-        // Per latest requirement: UCAN is always at context.params[entityKey].ucan
-        const authCfg = context.app.get('authentication') as AnyObj;
-        const entityKey = authCfg?.entity || 'login';
-        if (log) {
-            try { logUcanParams('verifyAgainstReqs:start', context); } catch {}
+        let rawUcan = _get(context.params, config.client_ucan) as string;
+        if(!rawUcan){
+            const authCfg = context.app.get('authentication') as AnyObj;
+            const entityKey = authCfg?.entity || 'login';
+            rawUcan = _get(context.params, [entityKey, 'ucan']) as string;
         }
-        const rawUcanPrimary = _get(context.params, [entityKey, 'ucan']) as string;
-        // Fallback: legacy path if primary missing
-        const rawUcanFallback = rawUcanPrimary || _get(context.params, config?.client_ucan as any) as string;
-        // Normalize the client UCAN the same way the caps path does
-        // This brings the first check up to speed with the working cap_subjects flow.
-        let ucan = rawUcanFallback as unknown as string;
-        if (rawUcanFallback) {
-            try {
-                // ucanToken will stringify a UCAN object or return the compact form for strings
-                const maybe = ucanToken(rawUcanFallback as any);
-                if (maybe && typeof maybe === 'string') ucan = maybe;
-                if (log && rawUcanFallback !== ucan) console.log('Normalized client UCAN via ucanToken()');
-            } catch (e: any) {
-                if (log) console.log('UCAN normalization skipped (ucanToken threw):', e?.message);
-            }
+        if (log) console.log('get initial ucan', rawUcan)
+        let ucan = rawUcan as unknown as string;
+        try {
+            // ucanToken will stringify a UCAN object or return the compact form for strings
+            const maybe = ucanToken(rawUcan as any);
+            if (maybe && typeof maybe === 'string') ucan = maybe;
+            if (log && rawUcan !== ucan) console.log('Normalized client UCAN via ucanToken()');
+        } catch (e: any) {
+            if (log) console.log('UCAN normalization skipped (ucanToken threw):', e?.message);
         }
+
         const audience = options?.audience || _get(context.params, config.ucan_aud) as string;
         if (log) console.log('verify against reqs', reqs)
         let vMethod: (uc?: string, methodOpts?: MethodOpts) => Promise<VerifyRes>
@@ -501,9 +504,9 @@ export const ucanAuth = <S>(requiredCapabilities?: UcanCap, options?: UcanAuthOp
         // Diagnostics: show how/where we try to source the login when options.log is enabled
         if (options?.log) {
             try {
-                const src1:any = _get(context.params, [core_path, entity]);
-                const src2:any = _get(context.params, 'login');
-                const src3:any = _get(context.params, ['connection', entity]);
+                const src1: any = _get(context.params, [core_path, entity]);
+                const src2: any = _get(context.params, 'login');
+                const src3: any = _get(context.params, ['connection', entity]);
                 const authHeaderToken = _get(context.params, ['headers', 'authorization']);
                 console.log('[UCAN DIAG] ucanAuth:login-sourcing', {
                     entityKey: entity,
@@ -521,23 +524,28 @@ export const ucanAuth = <S>(requiredCapabilities?: UcanCap, options?: UcanAuthOp
                     method: (context as any).method,
                     hasAuthHeader: typeof authHeaderToken === 'string' && authHeaderToken.length > 0
                 });
-            } catch {}
+            } catch {
+            }
         }
 
         const existingLogin: any = _get(context.params, [core_path, entity]) || _get(context.params, 'login') || _get(context.params.connection, entity);
         // Ensure params[entity] is always an object with _id when a login identifier exists
         if (existingLogin) {
             context.params[entity] = typeof existingLogin === 'string'
-                ? { _id: existingLogin }
+                ? {_id: existingLogin}
                 : existingLogin;
         }
         const loginId = typeof existingLogin === 'string' ? existingLogin : existingLogin?._id;
         const hasLogin = !!(existingLogin && (typeof existingLogin === 'string' || !!loginId));
         // Per requirement: UCAN is always at context.params[entity].ucan
-        const existingUcan = _get(context.params, [entity, 'ucan']);
+        const existingUcan = _get(context.params, configuration.client_ucan || 'client_ucan') || _get(context.params, [entity, 'ucan']);
+
         if (options?.log) console.log('ucan auth', 'hasLogin', hasLogin, 'loginId', loginId, 'existingUcan', !!existingUcan, 'core_path', core_path, 'entity', entity, 'core', context.params[core_path], 'params login', context.params.login, 'required capabilities', requiredCapabilities);
         if (options?.log && !hasLogin) {
-            try { logUcanParams('ucanAuth:pre-auth', context); } catch {}
+            try {
+                logUcanParams('ucanAuth:pre-auth', context);
+            } catch {
+            }
         }
         //Below for passing through auth with no required capabilities
         if (requiredCapabilities === noThrow || (requiredCapabilities && requiredCapabilities[context.method] === noThrow)) return hasLogin ? context : await noThrowAuth(context);
@@ -546,15 +554,18 @@ export const ucanAuth = <S>(requiredCapabilities?: UcanCap, options?: UcanAuthOp
         // Pass through a lightweight log flag so the strategy can emit diagnostics when enabled
         if (!hasLogin && !existingUcan) {
             if (options?.log) {
-                try { (context as any).params = {...(context as any).params, log: true}; } catch {}
+                try {
+                    (context as any).params = {...(context as any).params, log: true};
+                } catch {
+                }
             }
             context = (adminPass || options?.specialChange) ? await noThrowAuth(context) : await bareAuth(context);
         }
         if (options?.log && !hasLogin) {
             // Log again after attempting auth to see if strategy populated the login
-            const postLogin:any = _get(context.params, [core_path, entity]) || _get(context.params, 'login') || _get(context.params.connection, entity);
+            const postLogin: any = _get(context.params, [core_path, entity]) || _get(context.params, 'login') || _get(context.params.connection, entity);
             const postId = typeof postLogin === 'string' ? postLogin : postLogin?._id;
-            console.log('[UCAN DIAG] ucanAuth:post-auth', { hasLogin: !!postLogin, postId, entityKey: entity });
+            console.log('[UCAN DIAG] ucanAuth:post-auth', {hasLogin: !!postLogin, postId, entityKey: entity});
         }
         if (requiredCapabilities === anyAuth && !options?.specialChange) {
             context.params.authenticated = !!context.params[entity];

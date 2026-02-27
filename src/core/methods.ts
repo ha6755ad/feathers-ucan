@@ -36,7 +36,7 @@ export class CoreCall {
     }
     async find (params:AnyObj = {}){
         const {core_path} = this.context.app.get('authentication');
-        return this.context.app?.service(this.service).find({...params as AnyParams, [this.entity]: params[this.entity], skip_hooks:true, admin_pass:true, ...{ [core_path]: this.core }})
+        return this.context.app?.service(this.service).find({...params as AnyParams, [this.entity]: params[this.entity], admin_pass:true, ...{ [core_path]: this.core }})
     }
     async create (data:AnyObj, params:AnyObj = {}){
         const {core_path} = this.context.app.get('authentication');
@@ -57,27 +57,27 @@ export class CoreCall {
 
     async _get(id:NullableId, params:AnyObj = {}){
         const {core_path} = this.context.app.get('authentication');
-        return this.context.app?.service(this.service)._get(id, {...params, [this.entity]: params[this.entity], ...{ [core_path]: this.core }})
+        return this.context.app?.service(this.service)._get(id, {...params, [this.entity]: params[this.entity], skip_hooks: true, ...{ [core_path]: this.core }})
     }
     async _find (params:AnyObj = {}){
         const {core_path} = this.context.app.get('authentication');
-        return this.context.app?.service(this.service)._find({...params as AnyParams, [this.entity]: params[this.entity], ...{ [core_path]: this.core }})
+        return this.context.app?.service(this.service)._find({...params as AnyParams, [this.entity]: params[this.entity], skip_hooks: true, ...{ [core_path]: this.core }})
     }
     async _create (data:AnyObj, params:AnyObj ={}){
         const {core_path} = this.context.app.get('authentication');
-        return this.context.app?.service(this.service)._create(data, {...params, [this.entity]: params[this.entity], ...{ [core_path]: this.core }})
+        return this.context.app?.service(this.service)._create(data, {...params, [this.entity]: params[this.entity], skip_hooks: true, ...{ [core_path]: this.core }})
     }
     async _patch (id:NullableId, data:AnyObj, params:AnyObj ={}){
         const {core_path} = this.context.app.get('authentication');
-        return this.context.app?.service(this.service)._patch(id, data, {...params, [this.entity]: params[this.entity], ...{ [core_path]: this.core }})
+        return this.context.app?.service(this.service)._patch(id, data, {...params, [this.entity]: params[this.entity], skip_hooks: true, ...{ [core_path]: this.core }})
     }
     async _update (id:NullableId, data:AnyObj, params:AnyObj ={}){
         const {core_path} = this.context.app.get('authentication');
-        return this.context.app?.service(this.service)._update(id, data, {...params, [this.entity]: params[this.entity], ...{ [core_path]: this.core }})
+        return this.context.app?.service(this.service)._update(id, data, {...params, [this.entity]: params[this.entity], skip_hooks: true, ...{ [core_path]: this.core }})
     }
     async _remove (id:NullableId, params:AnyObj ={}){
         const {core_path} = this.context.app.get('authentication');
-        return this.context.app?.service(this.service)._remove(id, {...params, [this.entity]: params[this.entity], ...{ [core_path]: this.core }})
+        return this.context.app?.service(this.service)._remove(id, {...params, [this.entity]: params[this.entity], skip_hooks: true, ...{ [core_path]: this.core }})
     }
 
 }
