@@ -360,12 +360,14 @@ export const checkUcan = (requiredCapabilities: UcanCap, options?: UcanAuthOptio
 
                 //If creator pass enabled, check to see if the auth login is the creator of the record
                 const {loginPass} = options || {loginPass: [[['*'], ['nonExistentMethod']]]}
+                if(options?.log) console.log('loginPass precheck', loginPass);
                 if (loginPass?.length) {
                     //object of scrubbed data object for pass that includes only limited access or full context.data object if no limits were present
                     let scrubbedData: AnyObj = {};
                     //scruData defaults to true - is only set to false
                     let scrubData = true;
                     const checkLoginPass = async (lpass: LoginPassOption) => {
+                        if(options?.log) console.log('checkLoginPass', lpass);
                         let methodsOnly = [];
                         const allMethods = lpass[1] === '*';
                         let methodIdx = -1;
@@ -384,7 +386,7 @@ export const checkUcan = (requiredCapabilities: UcanCap, options?: UcanAuthOptio
                             /** function for comparing record login id with context login*/
                             const checkLogin = (recordLoginPassId: string, loginIdPath: string = '_id') => {
                                 const loginCheckId = _get(context.params, `${configuration.entity}.${loginIdPath}`) as any;
-                                if(options?.log) console.log('checkLoginPass', loginCheckId, recordLoginPassId);
+                                if(options?.log) console.log('checkLogin', loginCheckId, recordLoginPassId);
                                 /**Make sure both are present to avoid pass on undefined*/
                                 if (loginCheckId && recordLoginPassId) {
                                     /** change login path result to array no matter what */
@@ -395,8 +397,11 @@ export const checkUcan = (requiredCapabilities: UcanCap, options?: UcanAuthOptio
                                             const checkId = String(checkArr[i])
                                             for (let rl = 0; rl < recordLoginPassId.length;) {
                                                 const rlId = String(recordLoginPassId[rl]);
-                                                if (rlId === checkId) loginOk = true;
-                                                else rl++;
+                                                if (rlId === checkId) {
+                                                    // Found a matching login id; mark success and break out of the inner loop
+                                                    loginOk = true;
+                                                    break;
+                                                } else rl++;
                                             }
                                             if (loginOk) return;
                                         }
