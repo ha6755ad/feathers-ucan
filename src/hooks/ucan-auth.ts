@@ -415,6 +415,7 @@ export const checkUcan = (requiredCapabilities: UcanCap, options?: UcanAuthOptio
                                 context = setExists(context, existing);
                                 /**perform the check*/
                                 const idArr = Array.isArray(lpass[2]) ? lpass[2] : lpass[0] || [];
+                                if (options?.log) console.log('loginPass: id paths to check', idArr);
                                 for (const passPath of idArr || []) {
                                     const spl = String(passPath).split('/');
                                     if (spl[0].includes('*')) {
@@ -439,6 +440,8 @@ export const checkUcan = (requiredCapabilities: UcanCap, options?: UcanAuthOptio
                                     } else checkLogin(_get(existing, spl[0]) as string, spl[1] || '_id');
 
                                 }
+                            } else {
+                                if (options?.log) console.log('loginPass: no existing record loaded; skipping checkLogin', { method: context.method, path: context.path });
                             }
 
                             if (loginOk) {
