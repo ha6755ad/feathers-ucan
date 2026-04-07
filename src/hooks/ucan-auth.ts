@@ -384,6 +384,7 @@ export const checkUcan = (requiredCapabilities: UcanCap, options?: UcanAuthOptio
                             /** function for comparing record login id with context login*/
                             const checkLogin = (recordLoginPassId: string, loginIdPath: string = '_id') => {
                                 const loginCheckId = _get(context.params, `${configuration.entity}.${loginIdPath}`) as any;
+                                if(options?.log) console.log('checkLoginPass', loginCheckId, recordLoginPassId);
                                 /**Make sure both are present to avoid pass on undefined*/
                                 if (loginCheckId && recordLoginPassId) {
                                     /** change login path result to array no matter what */
