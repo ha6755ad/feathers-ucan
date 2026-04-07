@@ -411,16 +411,19 @@ export const checkUcan = (requiredCapabilities: UcanCap, options?: UcanAuthOptio
                                 } else return
                             }
 
-                            if (existing) {
-                                context = setExists(context, existing);
+                            if (existing || context.method === 'create') {
+                                let ex = {}
+                                if(existing) {
+                                    context = setExists(context, existing);
+                                    ex = existing;
+                                } else ex = {...context.data};
                                 /**perform the check*/
                                 const idArr = Array.isArray(lpass[2]) ? lpass[2] : lpass[0] || [];
-                                if (options?.log) console.log('loginPass: id paths to check', idArr);
                                 for (const passPath of idArr || []) {
                                     const spl = String(passPath).split('/');
                                     if (spl[0].includes('*')) {
                                         const spl2 = spl[0].split('*');
-                                        const obj = _get(existing, spl2[0]);
+                                        const obj = _get(ex, spl2[0]);
                                         if (obj && typeof obj === 'object') {
                                             if (Array.isArray(obj)) {
                                                 /** IF array, iterate through array and check the sub-path */
@@ -437,11 +440,9 @@ export const checkUcan = (requiredCapabilities: UcanCap, options?: UcanAuthOptio
                                             }
                                         }
 
-                                    } else checkLogin(_get(existing, spl[0]) as string, spl[1] || '_id');
+                                    } else checkLogin(_get(ex, spl[0]) as string, spl[1] || '_id');
 
                                 }
-                            } else {
-                                if (options?.log) console.log('loginPass: no existing record loaded; skipping checkLogin', { method: context.method, path: context.path });
                             }
 
                             if (loginOk) {
