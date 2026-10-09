@@ -8,7 +8,7 @@
 
 An extension of jwt authentication in feathersjs to include the added functionality of UCAN `@ucans/ucans` tokens. More specifically, adding capabilities.
 
-UCAN tokens are unopinionated in general, and still emerging. There is a lot more that possibly could be done with this concept, we have built only what we have managed to use in my own current scope of project needs with this library. We have tried to leav it as unopinionated as possible!
+UCAN tokens are unopinionated in general, and still emerging. There is a lot more that possibly could be done with this concept, we have built only what we have managed to use in my own current scope of project needs with this library. We have tried to leave it as unopinionated as possible!
 
 
 # UCAN auth-strategy
@@ -134,7 +134,7 @@ declare type UcanAuthOptions = {
     or?: Array<string>,
     adminPass?: Array<string>,
     specialChange?: Array<string>|'*',
-    cap_subjects?:Array<NullableId>
+    subjects?:Record<string, Record<string, [['orgs', 'WRITE'], ['threads', 'READ']]>>
 }
 ```
 
@@ -148,7 +148,7 @@ The second element are the methods you want to allow this on ie: `['patch', 'cre
 - ********or:******** explains to run the `Capability` configuration passed to the ********allUcanAuth methods******** to be run as an or scenario instead of and. This is a significant extension of how ucans otherwise work. It will run multiple verify methods and if any pass, the auth will pass.
 - **********adminPass:********** allow internal call overrides of ucan requirements. This is important for writing functions that internal operations may need to perform like removing a created org if a hook isn’t successful. Calling this requires passing an array of methods as the value of the admin option (`Array<string>`) as well as setting `context.params.admin_pass` to `true` from within the feathers app (no client side overrides). The value of this property is an array of methods to allow `admin_pass` params on.
 - **********specialChange:********** allow special unauthenticated changes. Pass `*` as the argument to allow all changes or `remove`. Otherwise pass a list of paths to allow changes to. Will accept common mongo operators `$set` `$unset` `$addToSet` `$pull` `$push` and will take either the top-level path as in `topLevel.nextLevel` scenarios will allow all changes if `topLevel` is included in the specialChange array - or the more explicit `full.path.specifically`
-- **********cap_subjects:********** allow for a list of capability ids to be checked for a match. This is useful for checking for a specific capability that may not be in the ucan token but is rather stored in a database service (stored at 'caps' by defualt but configurable at app.get('authentication').capability_service).
+- **********subjects:********** a list of subject ids to check for ucan tokens stored on the user record (Record<subject_id, ucan_token>). This enables multi-ucan users in a single call with the capabilities stored on the user record instead of an outside service. Subjects are keyed by id and the value is a methods object with UcanCapability values.
 
 # Example
 

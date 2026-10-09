@@ -14,7 +14,6 @@ import {
 import {logUcanParams} from '../utils/log-ucan-params';
 import {NotAuthenticated} from '@feathersjs/errors';
 import {loadExists, setExists} from '../utils';
-import {CoreCall} from '../core';
 
 type AnyObj = any
 
@@ -46,19 +45,7 @@ export type CapabilityParts = Partial<Capability> | [string, Array<string> | str
 export declare type LoginPassOption =
     [Array<string>, Array<string> | '*']
     | [Array<string>, Array<string> | '*', Array<string>];
-export declare type UcanAuthOptions = {
-    creatorPass?: '*' | Array<string>,
-    loginPass?: Array<LoginPassOption>,
-    or?: '*' | Array<string>
-    adminPass?: Array<string>,
-    noThrow?: boolean,
-    log?: boolean,
-    existingParams?: AnyObj,
-    specialChange?: Array<string> | AnyAuth,
-    cap_subjects?: Array<string>,
-    special_params?: Record<string, any>, //Pass any params
-    audience?: string
-}
+
 type RequiredCapability = { capability: Capability, rootIssuer: string }
 export type UcanCap = Array<CapabilityParts> | AnyAuth | NoThrow;
 export type UcanAllArgs = {
@@ -71,7 +58,23 @@ export type UcanAllArgs = {
     remove?: UcanCap
 };
 
-type VerifyOne = { ucan: string } & VerifyOptions;
+type Subjects = Record<string, UcanAllArgs>
+export declare type UcanAuthOptions = {
+    creatorPass?: '*' | Array<string>,
+    loginPass?: Array<LoginPassOption>,
+    or?: '*' | Array<string>
+    adminPass?: Array<string>,
+    noThrow?: boolean,
+    log?: boolean,
+    existingParams?: AnyObj,
+    specialChange?: Array<string> | AnyAuth,
+    subjects?: Subjects,
+    special_params?: Record<string, any>, //Pass any params
+    audience?: string
+}
+
+type Ucans = Record<string,string>
+type VerifyOne = { ucan:string } & VerifyOptions;
 
 type Auth = <S>(method: string) => (context: HookContext<S>) => Promise<HookContext<S>>
 type Config = { entity: string, service: string, defaultScheme: string, defaultHierPart: string };
@@ -187,84 +190,38 @@ export type VerifyConfig = {
 };
 
 type MethodOpts = { aud?: string }
-export const verifyAgainstReqs = <S>(reqs: Array<RequiredCapability>, config: VerifyConfig, options?: UcanAuthOptions) => {
+export const verifyAgainstReqs = <S>(reqs: Array<RequiredCapability>, { ucan, aud }:{ucan:string, aud:string}, options?: UcanAuthOptions) => {
     return async (context: HookContext<S>): Promise<VerifyRes> => {
         const log = options?.log
-        let rawUcan = _get(context.params, config.client_ucan) as string;
-        if(!rawUcan){
-            const authCfg = context.app.get('authentication') as AnyObj;
-            const entityKey = authCfg?.entity || 'login';
-            rawUcan = _get(context.params, [entityKey, 'ucan']) as string;
-        }
-        if (log) console.log('get initial ucan', rawUcan)
-        let ucan = rawUcan as unknown as string;
+        if(log) console.log('verifyAgainstReqs', reqs, ucan, options)
         try {
             // ucanToken will stringify a UCAN object or return the compact form for strings
-            const maybe = ucanToken(rawUcan as any);
+            const maybe = ucanToken(ucan as any);
             if (maybe && typeof maybe === 'string') ucan = maybe;
-            if (log && rawUcan !== ucan) console.log('Normalized client UCAN via ucanToken()');
+            if (log && ucan !== ucan) console.log('Normalized client UCAN via ucanToken()');
         } catch (e: any) {
             if (log) console.log('UCAN normalization skipped (ucanToken threw):', e?.message);
         }
 
-        const audience = options?.audience || _get(context.params, config.ucan_aud) as string;
         if (log) console.log('verify against reqs', reqs)
         let vMethod: (uc?: string, methodOpts?: MethodOpts) => Promise<VerifyRes>
         const or = options?.or || []
         if (ucan && (or === '*' || or.includes(context.method))) vMethod = (uc?: string, methodOpts?: MethodOpts) => orVerifyLoop((reqs || []).map(a => {
             return {
                 ucan: uc || ucan,
-                audience: methodOpts?.aud || audience,
+                audience: methodOpts?.aud || aud,
                 requiredCapabilities: [a]
             }
         }), log)
         else vMethod = (uc?: string, methodOpts?: MethodOpts) => verifyOne(uc || ucan, {
-            audience: methodOpts?.aud || audience,
+            audience: methodOpts?.aud || aud,
             requiredCapabilities: reqs
         }, log) as Promise<VerifyRes>
         let v = await vMethod()
+
         context.params.ucan_auth_result = v;
         if (log) console.log('first verify try', v);
-        if (v?.ok) return v;
-        const cs = (options?.cap_subjects || []).filter(a => !!a)
-        if (log) console.log('check cap_subjects', cs);
-        if (cs) {
-            const configuration = config?.loginConfig || context.app.get('authentication') as AnyObj;
-            const loginCheckId = String(_get(context.params, `${configuration.entity}._id` || '')) as any;
-            const caps = await new CoreCall(configuration.capability_service || 'caps', context).find({
-                query: {
-                    $limit: cs.length,
-                    subject: {$in: cs}
-                },
-                skip_hooks: true,
-                admin_pass: true,
-                skip_loop_detection: true,
-                ...options?.special_params || {}
-            })
-                .catch(err => console.log(`Error finding caps in ucan auth: ${err.message}`))
-            if (log) console.log('caps', caps);
-            if (caps?.data) {
-                for (const cap of caps.data) {
-                    for (const k in cap.caps || {}) {
-                        if (log) console.log('check cap', k, cap.caps[k].logins, loginCheckId);
-                        if ((cap.caps[k].logins || []).map((a: any) => String(a)).includes(loginCheckId)) {
-                            try {
-                                const ucanString = ucanToken(cap.caps[k].ucan)
-                                if (log) console.log('got ucan string', ucanString);
-                                if (ucanString) {
-                                    v = await vMethod(ucanString, {aud: cap.did})
-                                    if (log) console.log('tried v on cap', v);
-                                }
-                            } catch (e: any) {
-                                console.log(`Error verifying ucan from cap: ${cap._id}. Err:${e.message}`)
-                            }
-                            if (options?.log) console.log('tried v on cap', v);
-                            if (v?.ok) return v;
-                        }
-                    }
-                }
-            }
-        }
+
         return v;
     }
 }
@@ -303,7 +260,37 @@ export const checkUcan = (requiredCapabilities: UcanCap, options?: UcanAuthOptio
         const reqs: Array<RequiredCapability> = modelCapabilities(requiredCapabilities as Array<CapabilityParts>, configuration as CapabilityModelConfig);
 
         if (reqs.length) {
-            v = await verifyAgainstReqs(reqs, configuration as VerifyConfig, options)(context)
+            let rawUcan = _get(context.params, configuration.client_ucan) as string;
+            const authCfg = context.app.get('authentication') as AnyObj;
+            const entityKey = authCfg?.entity || 'login';
+            const login:any = _get(context.params, [entityKey]) || {}
+            if(!rawUcan){
+                rawUcan = login.ucan as string;
+            }
+            const log = options?.log;
+            if (log) console.log('get initial ucan', rawUcan)
+            let ucan = rawUcan as unknown as string;
+            const aud = options?.audience || _get(context.params, configuration.ucan_aud) as string;
+            v = await verifyAgainstReqs(reqs, { ucan, aud }, options)(context)
+            if(!v.ok && options?.subjects){
+                const ucans:any = {};
+                if(options?.subjects && login.ucans){
+                    for(const sid in options.subjects) {
+                        if(login.ucans[sid]) ucans[sid] = login.ucans[sid];
+                    }
+                }
+                for(const sid in ucans){
+                    const subjectCap = ((options.subjects[sid] || {}) as any)[context.method]
+                    if(!subjectCap) continue;
+                    if(subjectCap === anyAuth){
+                        v.ok = true;
+                        break;
+                    }
+                    const subject_reqs: Array<RequiredCapability> = modelCapabilities(subjectCap as Array<CapabilityParts>, configuration as CapabilityModelConfig);
+                    v = await verifyAgainstReqs(subject_reqs, { ucan: ucans[sid], aud }, {})(context)
+                    if(v.ok) break;
+                }
+            }
 
             /** if the anyAuth setting is used along with specialChange, a user could get through to this point despite not being authenticated, so this step does not allow a pass for anyAuth setting even though no requiredCapabilities are present - because it was intended to throw if not authenticated unless special change conditions are met */
         } else if (requiredCapabilities !== '*') v.ok = true;
