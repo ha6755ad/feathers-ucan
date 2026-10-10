@@ -205,7 +205,7 @@ export const verifyAgainstReqs = <S>(reqs: Array<RequiredCapability>, { ucan, au
 
         if (log) console.log('verify against reqs', reqs)
         let vMethod: (uc?: string, methodOpts?: MethodOpts) => Promise<VerifyRes>
-        const or = options?.or || []
+        const or = options?.or || '*'
         if (ucan && (or === '*' || or.includes(context.method))) vMethod = (uc?: string, methodOpts?: MethodOpts) => orVerifyLoop((reqs || []).map(a => {
             return {
                 ucan: uc || ucan,
@@ -275,19 +275,19 @@ export const checkUcan = (requiredCapabilities: UcanCap, options?: UcanAuthOptio
             if(!v.ok && options?.subjects){
                 const ucans:any = {};
                 if(options?.subjects && login.ucans){
-                    for(const sid in options.subjects) {
-                        if(login.ucans[sid]) ucans[sid] = login.ucans[sid];
+                    for(const subjectKey in options.subjects) {
+                        if(login.ucans[subjectKey]) ucans[subjectKey] = login.ucans[subjectKey];
                     }
                 }
-                for(const sid in ucans){
-                    const subjectCap = ((options.subjects[sid] || {}) as any)[context.method]
+                for(const subjectKey in ucans){
+                    const subjectCap = ((options.subjects[subjectKey] || {}) as any)[context.method]
                     if(!subjectCap) continue;
                     if(subjectCap === anyAuth){
                         v.ok = true;
                         break;
                     }
                     const subject_reqs: Array<RequiredCapability> = modelCapabilities(subjectCap as Array<CapabilityParts>, configuration as CapabilityModelConfig);
-                    v = await verifyAgainstReqs(subject_reqs, { ucan: ucans[sid], aud }, {})(context)
+                    v = await verifyAgainstReqs(subject_reqs, { ucan: ucans[subjectKey], aud }, {})(context)
                     if(v.ok) break;
                 }
             }
